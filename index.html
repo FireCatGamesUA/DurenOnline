@@ -146,7 +146,9 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
   box-shadow:0 0 0 var(--px) #000;
 }
 .oppBack:first-child{margin-left:0}
-.oppBack img,.card.back img{position:absolute;inset:0;width:100%;height:100%}
+/* відкриті карти суперника — того ж розміру, що й рубашки */
+#oppZone .card{width:calc(var(--cw)*.65);margin-left:calc(var(--cw)*-.3)}
+#oppZone .card:first-child{margin-left:0}
 .oppBack.hasimg,.card.back.hasimg{background:none;box-shadow:none}
 .slotZone{position:absolute;z-index:1;display:flex;flex-direction:column;align-items:center;gap:6px}
 .slotZone img{width:100%;display:block}
@@ -276,6 +278,7 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
   .slotZone img{width:calc(var(--cw)*.9)}
   .slotZone .card.back{width:calc(var(--cw)*.9);height:calc(var(--cw)*1.26);aspect-ratio:auto}
   .oppBack{margin-left:calc(var(--cw)*-.35)}
+    #oppZone .card{margin-left:calc(var(--cw)*-.35)}
   #mid{padding:4px 0;min-height:calc(var(--cw)*1.9)}
   #table{min-height:calc(var(--cw)*1.8)}
   .slot{height:calc(var(--cw)*1.75)}
