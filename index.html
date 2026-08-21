@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Дурень онлайн</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tiny5&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>if(typeof Peer==='undefined'){document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>')}</script>
+<style>
+:root{
+  --cw: clamp(62px, 12vw, 96px);
+  --px: 4px;
+  --bg1:#1a2a1e; --ink:#f0ead8; --accent:#9fe0a8; --warn:#ffd98a;
+  --btn-base:#3f7a4e; --btn-hi:#6fb87d; --btn-lo:#1e4a2a; --btn-ink:#0a1410;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{height:100%;overflow-y:hidden}
+body{
+  font-family:'Tiny5',monospace;
+  font-size:14px;
+  color:var(--ink);
+  background:#141414;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  -webkit-font-smoothing:none;
+  font-smooth:never;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+#bg{position:fixed;inset:0;z-index:0;background:#141414 center/cover no-repeat;
+  image-rendering:pixelated;image-rendering:crisp-edges}
+body::after{content:"";position:fixed;inset:0;background:rgba(5,12,8,.45);pointer-events:none;z-index:0}
+#lobby,#game{position:relative;z-index:1;min-height:100vh}
+img{image-rendering:pixelated;image-rendering:crisp-edges}
+
+/* ============ ПІКСЕЛЬНА КНОПКА ============ */
+button{
+  font-family:'Tiny5',monospace;
+  font-size:14px;
+  letter-spacing:1px;text-transform:uppercase;color:var(--ink);
+  background:var(--btn-base);border:none;
+  padding:calc(var(--px)*2) calc(var(--px)*4);
+  cursor:pointer;
+  box-shadow:
+    inset calc(var(--px)*-1) calc(var(--px)*-1) 0 0 var(--btn-lo),
+    inset var(--px) var(--px) 0 0 var(--btn-hi),
+    0 0 0 var(--px) var(--btn-ink);
+  transition:transform .06s ease-out, box-shadow .06s ease-out;
+  min-height:42px;
+}
+button:hover{filter:brightness(1.12)}
+button:active{
+  transform:translate(var(--px),var(--px));
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--btn-lo),
+    inset calc(var(--px)*-1) calc(var(--px)*-1) 0 0 var(--btn-hi),
+    0 0 0 var(--px) var(--btn-ink);
+}
+button:disabled{opacity:.45;cursor:default;filter:grayscale(.7)}
+button.mini{padding:var(--px) calc(var(--px)*2);font-size:10px;min-height:28px}
+
+input{
+  font-family:'Tiny5',monospace;font-size:16px;
+  padding:calc(var(--px)*2) calc(var(--px)*3);border:none;
+  background:var(--bg1);color:var(--ink);
+  text-transform:uppercase;letter-spacing:4px;width:160px;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 #000,
+    inset calc(var(--px)*-1) calc(var(--px)*-1) 0 0 #4a6a50,
+    0 0 0 var(--px) var(--btn-ink);
+}
+input::placeholder{color:#6a8a70;letter-spacing:1px}
+
+/* ---------- ЛОБІ ---------- */
+#lobby{display:flex;align-items:center;justify-content:center;padding:20px}
+.lobbyWrap{display:flex;gap:24px;max-width:1000px;width:100%;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.panel{
+  flex:1;min-width:280px;max-width:760px;width:100%;
+  background:rgba(14,24,17,.92);border:none;
+  box-shadow:
+    inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
+    inset calc(var(--px)*2) calc(var(--px)*2) 0 0 #3a5a42,
+    0 0 0 calc(var(--px)*2) var(--btn-ink);
+  padding:34px 38px;
+}
+/* ---------- РЕЖИМИ ---------- */
+.modes{
+  display:flex;flex-direction:column;gap:4px;min-width:180px;max-width:220px;
+  background:rgba(14,24,17,.92);
+  box-shadow:
+    inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
+    inset calc(var(--px)*2) calc(var(--px)*2) 0 0 #3a5a42,
+    0 0 0 calc(var(--px)*2) var(--btn-ink);
+  padding:22px 18px;
+}
+.modes h3{font-size:12px;letter-spacing:3px;color:#a8c4ae;margin-bottom:10px;text-align:center}
+.modeBtn{
+  font-family:'Tiny5',monospace;font-size:13px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--ink);
+  background:transparent;border:none;border-bottom:3px solid transparent;
+  padding:10px 12px;cursor:pointer;text-align:left;
+  transition:border-color .15s,color .15s,background .15s;
+  min-height:auto;box-shadow:none;
+}
+.modeBtn:hover{color:var(--accent);background:rgba(0,0,0,.2)}
+.modeBtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+#modeList{display:flex;flex-direction:column;gap:4px}
+#modeList .modeBtn{width:100%}
+
+h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
+.mats{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
+.matBtn{
+  width:110px;height:70px;border:none;cursor:pointer;
+  background-size:cover;background-position:center;
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  opacity:.65;transition:.12s;position:relative;padding:0;
+  box-shadow:0 0 0 calc(var(--px)) var(--btn-ink);
+}
+.matBtn span{position:absolute;left:0;right:0;bottom:0;font-size:10px;background:rgba(0,0,0,.7);padding:3px 0;text-align:center;letter-spacing:1px;color:#fff}
+.matBtn.active{opacity:1;box-shadow:0 0 0 calc(var(--px)) var(--accent), 0 0 14px rgba(140,255,160,.4)}
+.cols{display:flex;gap:26px;flex-wrap:wrap}
+.col{
+  flex:1;min-width:260px;background:rgba(0,0,0,.25);
+  box-shadow:
+    inset var(--px) var(--px) 0 0 #000,
+    inset calc(var(--px)*-1) calc(var(--px)*-1) 0 0 #2a4a32,
+    0 0 0 var(--px) var(--btn-ink);
+  padding:18px;
+}
+.col h2{font-size:16px;margin-bottom:12px;color:#d9efdd}
+.codeBig{font-size:28px;letter-spacing:6px;color:var(--warn);margin:8px 0}
+.small{font-size:12px;color:#a8c4ae}
+#joinStatus,#hostStatus{margin-top:10px;font-size:13px;color:var(--warn);min-height:18px}
+
+/* ---------- ГРА ---------- */
+#game{display:flex;flex-direction:column;padding:8px 14px;gap:4px;height:100dvh;overflow:hidden}
+#topZone{display:flex;justify-content:center;align-items:flex-start;padding:8px 0 6px;min-height:calc(var(--cw)*1.05)}
+#oppZone{display:flex;align-items:flex-start;gap:0;min-height:calc(var(--cw)*1.05);max-width:100%}
+@media (min-height:700px){
+  #topZone{padding-top:calc(var(--cw)*0.75);min-height:calc(var(--cw)*1.35)}
+}
+.oppBack{
+  width:calc(var(--cw)*.65);margin-left:calc(var(--cw)*-.3);
+  height:calc(var(--cw)*.95);position:relative;overflow:hidden;
+  background:repeating-linear-gradient(45deg,#5a2b2b 0 4px,#7a3c3c 4px 8px);
+  box-shadow:0 0 0 var(--px) #000;
+}
+.oppBack:first-child{margin-left:0}
+.oppBack img,.card.back img{position:absolute;inset:0;width:100%;height:100%}
+.oppBack.hasimg,.card.back.hasimg{background:none;box-shadow:none}
+.slotZone{position:absolute;z-index:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.slotZone img{width:100%;display:block}
+.slotZone .card.back{width:100%;height:auto;aspect-ratio:66/100}
+.card{width:var(--cw);position:relative}
+.card img{width:100%;display:block}
+.card.back{
+  height:calc(var(--cw)*1.4);position:relative;overflow:hidden;
+  background:repeating-linear-gradient(45deg,#5a2b2b 0 4px,#7a3c3c 4px 8px);
+  box-shadow:0 0 0 var(--px) #000;
+}
+.badge{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;box-shadow:none;
+  padding:0;margin:0;
+  font-size:clamp(22px, 4vw, 34px);
+  font-weight:bold;
+  color:#fff;
+  text-shadow:
+    2px 2px 0 #000,
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    0 2px 0 #000,
+    2px 0 0 #000,
+    0 -2px 0 #000,
+    -2px 0 0 #000;
+  letter-spacing:2px;
+  pointer-events:none;
+}
+#statusText{
+  position:relative;z-index:2;
+  text-align:center;font-size:15px;
+  min-height:24px;padding:8px 0 4px;
+  text-shadow:2px 2px 0 #000;color:var(--warn);
+}
+#mid{flex:1;min-height:calc(var(--cw)*1.4);display:flex;align-items:center;justify-content:center;padding:4px 0;overflow:hidden}
+#table{
+  display:flex;gap:clamp(6px,1.5vw,16px);flex-wrap:wrap;
+  justify-content:center;align-items:center;
+  min-height:calc(var(--cw)*1.85);max-width:100%;
+}
+.slot{position:relative;width:calc(var(--cw) + var(--px)*6);height:calc(var(--cw)*1.8);margin-top:6px}
+.slot .atk{position:absolute;left:0;top:calc(var(--cw)*.35)}
+.slot .def{position:absolute;left:calc(var(--cw)*.18);top:0;transform:rotate(9deg)}
+.slot.clickable{cursor:pointer}
+#actions{flex:0 0 auto;display:flex;justify-content:center;gap:12px;min-height:50px;flex-wrap:wrap;margin-top:0}
+#actions button{font-size:16px;padding:calc(var(--px)*2.5) calc(var(--px)*6);min-height:48px}
+#hand{
+  flex:0 0 auto;
+  display:flex;justify-content:center;align-items:flex-end;
+  padding:36px 4px 16px;
+  min-height:calc(var(--cw)*1.5 + 36px);
+  overflow-x:auto;overflow-y:visible;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  scroll-snap-type:x proximity;
+}
+#hand .card{margin-left:calc(var(--cw)*-.32);transition:transform .15s;scroll-snap-align:center}
+#hand .card:first-child{margin-left:0}
+#hand .card.playable{cursor:pointer}
+#hand .card.playable:hover,#hand .card.playable:active{transform:translateY(-12px)}
+
+@media (max-height:699px){
+  :root{--cw:clamp(48px,12vh,84px)}
+  #topZone{padding-top:6px;min-height:calc(var(--cw)*1.05)}
+  #statusText{padding:4px 0 2px;min-height:20px;font-size:13px}
+  #mid{min-height:calc(var(--cw)*1.5)}
+  #table{min-height:calc(var(--cw)*1.7)}
+  .slot{height:calc(var(--cw)*1.7)}
+  #actions{min-height:44px}
+  #actions button{min-height:42px;padding:calc(var(--px)*2) calc(var(--px)*5)}
+  #hand{padding-top:24px;min-height:calc(var(--cw)*1.5 + 24px)}
+  .badge{font-size:clamp(16px, 3.5vw, 24px);text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;}
+}
+
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9;padding:20px}
+.ovPanel{
+  background:rgba(14,24,17,.96);
+  box-shadow:
+    inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
+    inset calc(var(--px)*2) calc(var(--px)*2) 0 0 #3a5a42,
+    0 0 0 calc(var(--px)*2) var(--btn-ink);
+  padding:clamp(22px,4vw,34px) clamp(24px,4vw,46px);
+  text-align:center;max-width:460px;width:100%;
+}
+.ovPanel h2{font-size:26px;margin-bottom:12px;color:var(--accent)}
+.ovPanel p{margin-bottom:20px;color:#bcd6c0;font-size:14px;line-height:1.4}
+.ovPanel .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+#toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  background:#7a2c2c;
+  box-shadow:0 0 0 var(--px) #000, 0 0 0 calc(var(--px)*2) var(--btn-ink);
+  padding:calc(var(--px)*2) calc(var(--px)*4);
+  font-family:'Tiny5',monospace;font-size:12px;letter-spacing:1px;color:#fff;
+  z-index:10;opacity:0;transition:opacity .25s;pointer-events:none;
+  max-width:90vw;text-align:center;
+}
+
+@media (max-width:680px){
+    html,body{height:auto;overflow-y:auto}
+  #game{height:100dvh;overflow:hidden}
+  body{font-size:12px}
+  button{font-size:13px}
+  #lobby{padding:14px}
+  .lobbyWrap{flex-direction:column;align-items:stretch}
+  .modes{max-width:100%;min-width:0}
+  .modes h3{text-align:center}
+  .panel{padding:22px 20px}
+  h1{font-size:24px;margin-bottom:16px}
+  .mats{gap:8px}
+  .matBtn{width:90px;height:56px}
+  .matBtn span{font-size:9px}
+  .cols{gap:14px;flex-direction:column}
+  .col{min-width:0}
+  .col h2{font-size:14px}
+  input{width:100%;font-size:14px}
+  .codeBig{font-size:22px;letter-spacing:4px}
+  .small{font-size:11px}
+  #joinStatus,#hostStatus{font-size:12px}
+  #statusText{font-size:13px;padding:6px 4px}
+  #game{padding:6px 8px;gap:2px}
+  #topZone{gap:10px;padding-top:6px;align-items:center}
+  #oppZone{margin-top:0;align-items:center}
+  .slotZone{position:static}
+  .slotZone img{width:calc(var(--cw)*.9)}
+  .slotZone .card.back{width:calc(var(--cw)*.9);height:calc(var(--cw)*1.26);aspect-ratio:auto}
+  .oppBack{margin-left:calc(var(--cw)*-.35)}
+  #mid{padding:4px 0;min-height:calc(var(--cw)*1.9)}
+  #table{min-height:calc(var(--cw)*1.8)}
+  .slot{height:calc(var(--cw)*1.75)}
+  .slot .atk{top:calc(var(--cw)*.3)}
+  #hand{padding:24px 6px calc(14px + env(safe-area-inset-bottom));min-height:calc(var(--cw)*1.5 + 24px)}
+  #hand .card{margin-left:calc(var(--cw)*-.38)}
+  #actions{gap:8px}
+  #actions button{font-size:15px;flex:1 1 110px;max-width:220px}
+  .ovPanel h2{font-size:22px}
+  .ovPanel p{font-size:13px}
+  .badge{font-size:clamp(16px, 3vw, 22px);text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;}
+}
+@media (max-width:380px){
+  :root{--cw:58px}
+  .matBtn{width:80px;height:50px}
+  h1{font-size:20px}
+  #topZone{gap:6px}
+}
+@media (max-height:520px) and (orientation:landscape){
+  #game{min-height:auto}
+  #topZone{padding-top:4px}
+  #oppZone{min-height:calc(var(--cw)*1)}
+  #hand{min-height:calc(var(--cw)*1.4 + 24px);padding-top:24px}
+  #statusText{padding:4px 0}
+  #mid{gap:14px;min-height:calc(var(--cw)*1.8)}
+}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<!-- ================= ЛОБІ ================= -->
+<div id="lobby">
+  <div class="lobbyWrap">
+    <div class="panel">
+      <h1>ДУРЕНЬ ОНЛАЙН</h1>
+      <div class="mats" id="mats"></div>
+      <div class="cols">
+        <div class="col">
+          <h2>СТВОРИТИ КІМНАТУ</h2>
+          <button id="createBtn">СТВОРИТИ</button>
+          <div id="hostBox" hidden>
+            <div class="small">Код запрошення:</div>
+            <div class="codeBig"><span id="myCode"></span> <button id="copyBtn" class="mini">СКОПІЮВАТИ</button></div>
+            <div class="small">Надішліть код другу.</div>
+            <div id="hostStatus">Очікування суперника…</div>
+            <button id="startBtn" hidden>ПОЧАТИ ГРУ</button>
+            <button id="botBtn" style="margin-top:10px;width:100%">ГРАТИ З БОТОМ</button>
+          </div>
+        </div>
+        <div class="col">
+          <h2>ПРИЄДНАТИСЯ ЗА КОДОМ</h2>
+          <input id="joinCode" maxlength="5" placeholder="КОД">
+          <button id="joinBtn" style="margin-top:10px;width:100%">ПРИЄДНАТИСЯ</button>
+          <div id="joinStatus"></div>
+        </div>
+      </div>
+    </div>
+    <!-- ========= РЕЖИМИ ========= -->
+    <div class="modes">
+      <h3>РЕЖИМ</h3>
+      <div id="modeList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ГРА ================= -->
+<div id="game" hidden>
+  <div id="topZone">
+    <div class="slotZone" id="trumpSlot"><img id="trumpImg" alt=""></div>
+    <div id="oppZone"></div>
+    <div class="slotZone" id="deckSlot">
+      <div class="card back" id="deckBack">
+        <div class="badge"><span id="deckCount">0</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="statusText"></div>
+  <div id="mid"><div id="table"></div></div>
+  <div id="actions">
+    <button id="doneBtn" hidden>БИТО</button>
+    <button id="takeBtn" hidden>ВЗЯТИ</button>
+    <button id="finishBtn" hidden>ЗАВЕРШИТИ</button>
+    <button id="transferBtn" hidden>ПЕРЕВЕСТИ</button>
+    <button id="passBtn" hidden>ДАЛІ</button>
+  </div>
+  <div id="hand"></div>
+</div>
+
+<div id="overlay" hidden><div class="ovPanel"><h2 id="ovTitle"></h2><p id="ovText"></p><div class="row" id="ovBtns"></div></div></div>
+<div id="toast"></div>
+
+<script>
+/* ============ ШЛЯХИ ДО ЗОБРАЖЕНЬ ============ */
+const IMG='';
+const BACK='back.png';
+const BACK_HTML='<img src="'+BACK+'" alt="" onload="this.parentNode.classList.add(\'hasimg\')" onerror="this.remove()">';
+const SUITS=['c','d','h','s'];
+const RANKS=[6,7,8,9,10,11,12,13,14];
+const MATS=[['foyer','card_mat_foyer.png','Фоє'],['basement','card_mat_basement.png','Підвал'],
+            ['office','card_mat_landlords_office.png','Кабінет'],['lounge','card_mat_lounge.png','Лаундж']];
+/* Режими: classic, balance, nosuit, transfer, negative */
+const MODES=[
+  ['classic','КЛАСИЧНИЙ'],
+  ['balance','БАЛАНС'],
+  ['nosuit','БЕЗ МАСТІ'],
+  ['transfer','ПЕРЕВІДНИЙ'],
+  ['negative','НЕГАТИВ']
+];
+const SLOTS={L:{x:27.5,y:10,w:9},R:{x:63.6,y:10,w:9.2}};
+const cardImg=c=>mode==='nosuit'?IMG+c.r+'n.png':IMG+c.r+c.s+'.png';
+const $=id=>document.getElementById(id);
+$('deckBack').innerHTML=BACK_HTML+$('deckBack').innerHTML;
+
+/* -------- Режим гри -------- */
+let mode=localStorage.getItem('durakMode')||'classic';
+function renderModes(){
+  document.querySelectorAll('.modeBtn').forEach(b=>
+    b.classList.toggle('active',b.dataset.mode===mode));
+}
+function setMode(k){
+  if(conn && conn.open && !isHost){ toast('Режим обирає хост'); return; }
+  mode=k;
+  localStorage.setItem('durakMode',k);
+  renderModes();
+  if(isHost && conn && conn.open) conn.send({t:'mode',mode});
+}
+MODES.forEach(m=>{
+  const b=document.createElement('button');
+  b.type='button';b.className='modeBtn';b.dataset.mode=m[0];
+  b.textContent=m[1];b.onclick=()=>setMode(m[0]);
+  $('modeList').appendChild(b);
+});
+renderModes();
+
+/* -------- стискання рядів карт -------- */
+function fitRow(el,w,avail,minStep,step0){
+  const n=el.children.length;
+  if(n<2)return;
+  let step=step0;
+  if(w+step0*(n-1)>avail)step=Math.max(minStep,(avail-w)/(n-1));
+  for(let i=1;i<n;i++)el.children[i].style.marginLeft=-(w-step)+'px';
+}
+function applyFit(){
+  const oz=$('oppZone');
+  if(oz&&oz.children.length>1){
+    const w=oz.children[0].offsetWidth||60;
+    fitRow(oz,w,Math.min(w*5.5,innerWidth*0.2),w*0.15,w*0.54);
+  }
+  const h=$('hand');
+  if(h&&h.children.length>1){
+    const w=h.children[0].offsetWidth||96;
+    fitRow(h,w,Math.max(w*3,h.clientWidth-12),w*0.25,w*0.68);
+  }
+}
+addEventListener('fullscreenchange',applyFit);
+addEventListener('resize',applyFit);
+
+const mqMobile=matchMedia('(max-width:680px)');
+function layoutMat(){
+  const L=$('trumpSlot'),R=$('deckSlot');
+  if(!L||!R)return;
+  if(mqMobile.matches){L.style.left=L.style.top=L.style.width='';R.style.left=R.style.top=R.style.width='';return;}
+  const MW=640,MH=400,
+        vw=document.documentElement.clientWidth,
+        vh=document.documentElement.clientHeight,
+        s=Math.max(vw/MW,vh/MH),
+        ox=(vw-MW*s)/2,oy=(vh-MH*s)/2;
+  const put=(el,r)=>{
+    el.style.left=(ox+r.x/100*MW*s)+'px';
+    el.style.top=(oy+r.y/100*MH*s)+'px';
+    el.style.width=(r.w/100*MW*s)+'px';
+  };
+  put(L,SLOTS.L);put(R,SLOTS.R);
+}
+addEventListener('resize',layoutMat);
+if(mqMobile.addEventListener)mqMobile.addEventListener('change',layoutMat);
+new ResizeObserver(layoutMat).observe(document.body);
+
+function setMat(k){localStorage.setItem('durakMat',k);const m=MATS.find(x=>x[0]===k)||MATS[0];
+  $('bg').style.backgroundImage=`url(${m[1]})`;
+  document.querySelectorAll('.matBtn').forEach(b=>b.classList.toggle('active',b.dataset.mat===m[0]));
+  layoutMat();}
+MATS.forEach(m=>{const b=document.createElement('button');b.type='button';b.className='matBtn';b.dataset.mat=m[0];
+  b.style.backgroundImage=`url(${m[1]})`;b.innerHTML=`<span>${m[2]}</span>`;b.onclick=()=>setMat(m[0]);$('mats').appendChild(b);});
+setMat(localStorage.getItem('durakMat')||'foyer');
+
+let peer=null,conn=null,isHost=false,roomCode='',joined=false,gameShown=false;
+let isBotGame=false;
+let botTimer=null;
+
+/* -------- ЛОГІКА БОТА -------- */
+function botThink(){
+  if(!isBotGame||!G||G.phase==='over')return;
+  clearTimeout(botTimer);
+  botTimer=setTimeout(botAct,650);
+}
+function botAct(){
+  if(!G||G.phase==='over')return;
+  const botSeat='guest', playerSeat='host';
+
+  /* Фаза "taking" — бот може лише чекати або підкидати якщо він атакуючий */
+  if(G.phase==='taking'){
+    if(G.attacker===botSeat){
+      /* Бот атакуючий — підкидати чи завершувати? */
+      const rk=tableRanks();
+      const playable=G.hands[botSeat].filter(c=>rk.has(c.r));
+      /* Підкидаємо тільки дешеві карти і якщо ліміт дозволяє */
+      if(playable.length && G.table.length<G.limit){
+        /* Сортуємо за зростанням, не-козирі першими */
+        playable.sort((a,b)=>{
+          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+          if(aT!==bT)return aT-bT;
+          return a.r-b.r;
+        });
+        const c=playable[0];
+        /* Підкидаємо лише якщо карта не козир або у суперника багато карт */
+        if(c.s!==G.trumpSuit || G.hands[playerSeat].length>=4){
+          applyIntent(botSeat,{t:'addTake',card:c});sync();botThink();return;
+        }
+      }
+      /* Завершуємо хід */
+      applyIntent(botSeat,{t:'finishTake'});sync();botThink();return;
+    }
+    /* Бот захисник у фазі taking — нічого не робимо, чекаємо */
+    return;
+  }
+
+  /* Фаза "play" */
+  if(G.phase==='play'){
+    /* Вікно переведення: атакуючий чекає, захисник вирішує */
+    if(G.transferWindow){
+      if(G.attacker===botSeat)return; /* бот-атакуючий терпляче чекає */
+      const rk=tableRanks();
+      const tr=G.hands[botSeat].find(c=>rk.has(c.r));
+      if(tr && G.hands[playerSeat].length>=G.table.length){
+        applyIntent(botSeat,{t:'transfer',card:tr});sync();botThink();return;
+      }
+      applyIntent(botSeat,{t:'pass'});sync();botThink();return;
+    }
+    if(G.attacker===botSeat){
+      /* Бот АТАКУЄ */
+      const undefended=G.table.some(p=>!p.d);
+      if(undefended){
+        /* Чекаємо поки суперник відіб'ється — нічого не робимо */
+        return;
+      }
+      /* Усі відбиті або стіл порожній */
+      if(G.table.length===0){
+        /* Перша атака: граємо найменшою не-козирною, інакше козирною */
+        const hand=[...G.hands[botSeat]];
+        hand.sort((a,b)=>{
+          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+          if(aT!==bT)return aT-bT;
+          return a.r-b.r;
+        });
+        if(hand.length){
+          applyIntent(botSeat,{t:'attack',card:hand[0]});sync();botThink();
+        }
+        return;
+      }
+      /* Є відбиті карти — можна підкидати або завершити хід */
+      const rk=tableRanks();
+      const playable=G.hands[botSeat].filter(c=>rk.has(c.r));
+      if(playable.length && G.table.length<G.limit && G.hands[playerSeat].length>G.table.length){
+        playable.sort((a,b)=>{
+          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+          if(aT!==bT)return aT-bT;
+          return a.r-b.r;
+        });
+        const c=playable[0];
+        if(c.s!==G.trumpSuit || c.r<=10){
+          applyIntent(botSeat,{t:'attack',card:c});sync();botThink();return;
+        }
+      }
+      /* Завершуємо хід — бито */
+      applyIntent(botSeat,{t:'done'});sync();botThink();return;
+    }else{
+      /* Бот ЗАХИЩАЄТЬСЯ */
+      const undefended=G.table.map((p,i)=>p.d?null:i).filter(x=>x!==null);
+      if(undefended.length===0){
+        /* Все відбито — чекаємо підкидання або БИТО від суперника */
+        /* Перевіряємо переведення в режимі transfer */
+        if(mode==='transfer' && G.table.length){
+          const rk=tableRanks();
+          const transferCard=G.hands[botSeat].find(c=>rk.has(c.r));
+          if(transferCard && G.hands[playerSeat].length>=G.table.length+1){
+            applyIntent(botSeat,{t:'transfer',card:transferCard});sync();botThink();return;
+          }
+        }
+        return;
+      }
+      /* Пробуємо відбити першу небиту карту */
+      const idx=undefended[0];
+      const atkCard=G.table[idx].a;
+      /* Шукаємо найдешевшу карту, що б'є */
+      const candidates=G.hands[botSeat].filter(c=>beats(c,atkCard,G.trumpSuit));
+      if(candidates.length===0){
+        /* Не можемо відбити — беремо */
+        applyIntent(botSeat,{t:'take'});sync();botThink();return;
+      }
+      /* Сортуємо: не-козирі першими, потім за номіналом */
+      candidates.sort((a,b)=>{
+        const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+        if(aT!==bT)return aT-bT;
+        return a.r-b.r;
+      });
+      /* Якщо є варіант не козирем — беремо його. Якщо тільки козир і атака не козир — беремо тільки якщо номінал прийнятний */
+      const chosen=candidates[0];
+      /* Захист дорогим козирем від не-козиря — лише якщо більше нічим і карт мало */
+      if(chosen.s===G.trumpSuit && atkCard.s!==G.trumpSuit && chosen.r>=12 && G.hands[botSeat].length>=3){
+        /* Краще взяти, ніж витрачати старший козир */
+        applyIntent(botSeat,{t:'take'});sync();botThink();return;
+      }
+      applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
+    }
+  }
+}
+function startBotGame(){
+  isBotGame=true;isHost=true;
+  G=newGame('auto');
+  showGame();layoutMat();
+  sync();botThink();
+}
+const peerId=c=>'durak-ua-room-'+c.toLowerCase();
+const genCode=()=>{const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<5;i++)s+=A[Math.floor(Math.random()*A.length)];return s;};
+
+$('createBtn').onclick=()=>{
+  if(typeof Peer==='undefined'){toast('Немає зʼєднання з сервером PeerJS');return;}
+  roomCode=genCode();peer=new Peer(peerId(roomCode));
+  peer.on('open',()=>{$('createBtn').disabled=true;$('joinBtn').disabled=true;
+    $('hostBox').hidden=false;$('myCode').textContent=roomCode;});
+  peer.on('connection',c=>{
+    if(conn){c.close();return;}
+    conn=c;setupConn();
+    joined=true;$('hostStatus').textContent='Суперник у кімнаті!';$('startBtn').hidden=false;
+  });
+  peer.on('error',e=>{if(e.type==='unavailable-id'){$('hostStatus').textContent='Код зайнятий — створіть ще раз';$('createBtn').disabled=false;}});
+};
+$('joinBtn').onclick=()=>{
+  const code=$('joinCode').value.trim().toUpperCase();if(code.length<4){toast('Введіть код кімнати');return;}
+  if(typeof Peer==='undefined'){toast('Немає зʼєднання з сервером PeerJS');return;}
+  roomCode=code;peer=new Peer();
+  peer.on('open',()=>{conn=peer.connect(peerId(code),{reliable:true});setupConn();
+    conn.on('open',()=>{$('joinBtn').disabled=true;$('createBtn').disabled=true;
+      $('joinStatus').textContent='Підключено! Очікуйте початку гри…';conn.send({t:'hello'});});});
+  peer.on('error',e=>{if(e.type==='peer-unavailable')$('joinStatus').textContent='Кімнату з таким кодом не знайдено';});
+};
+function setupConn(){
+  conn.on('data',onData);
+  conn.on('close',()=>{if(gameShown)showOverlay('Суперник вийшов з гри','',[['У ЛОБІ',reload]]);});
+}
+function onData(d){
+  if(!d||typeof d!=='object')return;
+  if(d.t==='hello'&&isHost){conn.send({t:'mode',mode});return;}
+if(d.t==='mode'&&!isHost){
+  mode=d.mode;
+  localStorage.setItem('durakMode',mode);
+  renderModes();
+  toast('Режим: '+(MODES.find(m=>m[0]===mode)||[,''])[1]||mode);
+  return;
+}
+  if(d.t==='intent'&&isHost){applyIntent('guest',d.m);sync();}
+  if(d.t==='view'&&!isHost){
+  V=d.v;
+  /* Оновлюємо режим з отриманого стану гри */
+  if(V.mode){
+    mode=V.mode;
+    localStorage.setItem('durakMode',mode);
+    renderModes();
+  }
+  ui.sel=null;hideOverlay();showGame();render();if(V.phase==='over')showOver();
+}
+  if(d.t==='err'&&!isHost)toast(d.msg);
+}
+const reload=()=>location.reload();
+$('copyBtn').onclick=()=>{
+  if(navigator.clipboard){navigator.clipboard.writeText(roomCode);toast('Код скопійовано');}
+  else toast(roomCode);
+};
+$('startBtn').onclick=()=>{isHost=true;G=newGame('auto');showGame();layoutMat();sync();};
+
+let G=null;
+const defSeat=()=>G.attacker==='host'?'guest':'host';
+/* -------- ЛОГІКА «ХТО КОГО Б'Є» -------- */
+function beats(d,a,t){
+  if(mode==='nosuit'){
+    if(d.r===6&&a.r===14)return true;
+    return d.r>=a.r;
+  }
+  if(mode==='balance'&&d.r===6&&a.r===14&&d.s===a.s)return true;
+  return (d.s===a.s&&d.r>a.r)||(d.s===t&&a.s!==t);
+}
+const tableRanks=()=>{const s=new Set();G.table.forEach(p=>{s.add(p.a.r);if(p.d)s.add(p.d.r);});return s;};
+const findCard=(h,c)=>h.find(x=>x.r===c.r&&x.s===c.s);
+const err=m=>({ok:false,msg:m}),OK={ok:true};
+
+function badDeal(hands){
+  if(mode==='nosuit')return false;
+  for(const seat of ['host','guest']){
+    const cnt={};
+    hands[seat].forEach(c=>cnt[c.s]=(cnt[c.s]||0)+1);
+    if(Object.values(cnt).some(n=>n>=4))return true;
+  }
+  return false;
+}
+function newGame(first){
+  let deck,hands,tries=0;
+  do{
+    deck=[];SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s})));
+    for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+    hands={host:deck.splice(0,6),guest:deck.splice(0,6)};
+    tries++;
+  }while(tries<100&&badDeal(hands));
+  G={deck,hands,table:[],discard:[],
+     trumpCard:null,trumpSuit:null,attacker:first,phase:'play',winner:null,limit:6,first:null,
+     transferWindow:false};
+  if(mode!=='nosuit'){
+    G.trumpCard=G.deck[G.deck.length-1]||null;
+    G.trumpSuit=G.trumpCard?G.trumpCard.s:null;
+  }
+  if(first==='auto'){
+    if(mode==='nosuit'){
+      G.attacker=Math.random()<.5?'host':'guest';
+    }else{
+      const low=s=>{const v=G.hands[s].filter(c=>c.s===G.trumpSuit).map(c=>c.r);return v.length?Math.min(...v):Infinity;};
+      const h=low('host'),g=low('guest');
+      G.attacker=(h===Infinity&&g===Infinity)?(Math.random()<.5?'host':'guest'):(h<g?'host':'guest');
+    }
+  }
+  G.first=G.attacker;beginTurn();return G;
+}
+function beginTurn(){G.phase='play';G.table=[];G.transferWindow=false;G.limit=Math.min(6,G.hands[defSeat()].length||6);}
+function refill(){
+  const seats=[G.attacker,defSeat()];
+  let changed=true;
+  while(changed&&G.deck.length){
+    changed=false;
+    for(const s of seats){
+      if(G.hands[s].length<6&&G.deck.length){
+        G.hands[s].push(G.deck.shift());
+        changed=true;
+      }
+    }
+  }
+}
+function checkEnd(){if(!G.deck.length){const h=G.hands.host.length,g=G.hands.guest.length;
+  if(h===0&&g===0){G.phase='over';G.winner='draw';}
+  else if(h===0){G.phase='over';G.winner='host';}
+  else if(g===0){G.phase='over';G.winner='guest';}}}
+function resolveTake(){const d=defSeat();G.table.forEach(p=>{G.hands[d].push(p.a);if(p.d)G.hands[d].push(p.d);});
+  G.table=[];refill();checkEnd();if(G.phase!=='over')beginTurn();return OK;}
+
+function applyIntent(seat,m){
+  if(!G||G.phase==='over')return err('Гру завершено');
+  const def=defSeat();
+  if(m.t==='attack'){
+    if(seat!==G.attacker||G.phase!=='play')return err('Зараз не можна атакувати');
+    if(G.transferWindow)return err('Суперник може перевести — зачекайте');
+    if(G.table.some(p=>!p.d))return err('Суперник ще не відбився');
+    if(G.table.length>=G.limit)return err('Ліміт атак вичерпано');
+    const c=findCard(G.hands[seat],m.card);if(!c)return err('Немає такої карти');
+    if(G.table.length&&!tableRanks().has(c.r))return err('Підкидати можна лише карти того ж номіналу');
+    G.hands[seat].splice(G.hands[seat].indexOf(c),1);G.table.push({a:c,d:null});return OK;
+  }
+  if(m.t==='defend'){
+    if(seat!==def||G.phase!=='play')return err('Зараз не можна відбиватись');
+    const p=G.table[m.idx];if(!p||p.d)return err('Ця атака вже відбита');
+    const c=findCard(G.hands[seat],m.card);if(!c)return err('Немає такої карти');
+    if(!beats(c,p.a,G.trumpSuit))return err('Ця карта не бʼє');
+    G.hands[seat].splice(G.hands[seat].indexOf(c),1);p.d=c;
+    /* Перевідний: все відбито і є карта для переведення — відкриваємо вікно,
+       атакуючий чекає, поки захисник переведе або скаже ДАЛІ */
+    if(mode==='transfer' && !G.table.some(x=>!x.d)){
+      const rk=tableRanks();
+      if(G.hands[seat].some(x=>rk.has(x.r)) && G.hands[G.attacker].length>=G.table.length){
+        G.transferWindow=true;
+      }
+    }
+    return OK;
+  }
+  /* ПЕРЕВЕДЕННЯ: захисник кладе карту того ж номіналу, ролі міняються */
+  if(m.t==='transfer'){
+    if(mode!=='transfer')return err('Переведення доступне лише в режимі "Перевідний"');
+    if(seat!==def||G.phase!=='play')return err('Зараз не можна перевести');
+    if(!G.transferWindow)return err('Зараз не можна перевести');
+    const c=findCard(G.hands[seat],m.card);if(!c)return err('Немає такої карти');
+    /* Карта для переведення має мати той самий номінал, що й карти на столі */
+    const rk=tableRanks();
+    if(!rk.has(c.r))return err('Карта для переведення має бути того ж номіналу');
+    /* Перевіряємо, чи в нового захисника достатньо карт */
+    const newDef=G.attacker;
+    const cardsOnTable=G.table.length;
+    if(G.hands[newDef].length<cardsOnTable)return err('У суперника недостатньо карт для переведення');
+    /* Виконуємо переведення */
+    G.hands[seat].splice(G.hands[seat].indexOf(c),1);
+    /* Карта переведення стає новою атакувальною картою */
+    G.table.push({a:c,d:null});
+    /* Міняємо ролі: захисник стає атакуючим, атакуючий — захисником */
+    const oldAttacker=G.attacker;
+    G.attacker=def;
+    G.transferWindow=false;
+    /* Оновлюємо ліміт для нового захисника */
+    G.limit=Math.min(6,G.hands[G.attacker].length||6);
+    return OK;
+  }
+  /* ДАЛІ — захисник відмовляється від переведення */
+  if(m.t==='pass'){
+    if(mode!=='transfer')return err('Недоступно в цьому режимі');
+    if(seat!==def||G.phase!=='play')return err('Не ваш хід');
+    if(!G.transferWindow)return err('Зараз не можна');
+    G.transferWindow=false;return OK;
+  }
+  if(m.t==='take'){
+    if(seat!==def||G.phase!=='play'||!G.table.some(p=>!p.d))return err('Зараз не можна взяти');
+    G.phase='taking';
+    if(!G.hands[G.attacker].some(c=>tableRanks().has(c.r))||G.table.length>=G.limit)return resolveTake();
+    return OK;
+  }
+  if(m.t==='addTake'){
+    if(seat!==G.attacker||G.phase!=='taking')return err('Зараз не можна підкидати');
+    if(G.table.length>=G.limit)return err('Ліміт атак');
+    const c=findCard(G.hands[seat],m.card);if(!c)return err('Немає такої карти');
+    if(!tableRanks().has(c.r))return err('Лише карти номіналу на столі');
+    G.hands[seat].splice(G.hands[seat].indexOf(c),1);G.table.push({a:c,d:null});return OK;
+  }
+  if(m.t==='finishTake'){if(seat!==G.attacker||G.phase!=='taking')return err('Не ваш хід');return resolveTake();}
+  if(m.t==='done'){
+    if(seat!==G.attacker||G.phase!=='play')return err('Не ваш хід');
+    if(G.transferWindow)return err('Суперник може перевести — зачекайте');
+    if(!G.table.length||G.table.some(p=>!p.d))return err('Ще є небиті карти');
+    G.table.forEach(p=>{G.discard.push(p.a,p.d);});G.table=[];
+    G.attacker=def;refill();checkEnd();if(G.phase!=='over')beginTurn();return OK;
+  }
+  return err('Невідома дія');
+}
+function makeView(seat){
+  const opp=seat==='host'?'guest':'host';let result=null;
+  if(G.phase==='over')result=G.winner==='draw'?'draw':(G.winner===seat?'win':'lose');
+  const view={myHand:[...G.hands[seat]].sort((a,b)=>(SUITS.indexOf(a.s)-SUITS.indexOf(b.s))||(a.r-b.r)),
+    oppCount:G.hands[opp].length,table:G.table,deckCount:G.deck.length,trumpCard:G.trumpCard,
+    trumpSuit:G.trumpSuit,attackerMe:G.attacker===seat,phase:G.phase,limit:G.limit,result,mode,
+    transferWindow:!!G.transferWindow};
+  /* Коли гра закінчилась — показуємо карти суперника */
+  if(G.phase==='over' && G.hands[opp].length){
+    view.oppHand=[...G.hands[opp]].sort((a,b)=>(SUITS.indexOf(a.s)-SUITS.indexOf(b.s))||(a.r-b.r));
+  }
+  return view;
+}
+function sync(){
+  if(isBotGame){
+    V=makeView('host');render();
+    if(V.phase!=='over')botThink();
+    return;
+  }
+  if(!isHost)return;
+  V=makeView('host');render();
+  if(conn&&conn.open)conn.send({t:'view',v:makeView('guest')});
+}
+
+let V=null;const ui={sel:null};
+function showGame(){if(gameShown)return;gameShown=true;$('lobby').hidden=true;$('game').hidden=false;layoutMat();}
+function sendIntent(m){
+  if(isBotGame){
+    const r=applyIntent('host',m);
+    if(!r.ok)toast(r.msg);
+    sync();
+    return;
+  }
+  if(isHost){const r=applyIntent('host',m);if(!r.ok)toast(r.msg);sync();}
+  else conn.send({t:'intent',m});
+}
+const vRanks=()=>{const s=new Set();V.table.forEach(p=>{s.add(p.a.r);if(p.d)s.add(p.d.r);});return s;};
+const undIdx=()=>V.table.map((p,i)=>p.d?null:i).filter(x=>x!==null);
+
+function legalSet(){
+  const set=new Set();if(!V||V.phase==='over')return set;
+  if(V.phase==='play'&&V.attackerMe&&undIdx().length===0&&V.table.length<V.limit&&!V.transferWindow){
+    const rk=vRanks();V.myHand.forEach((c,i)=>{if(!V.table.length||rk.has(c.r))set.add(i);});
+  }else if(V.phase==='play'&&!V.attackerMe){
+    const und=undIdx();V.myHand.forEach((c,i)=>{if(und.some(idx=>beats(c,V.table[idx].a,V.trumpSuit)))set.add(i);});
+  }else if(V.phase==='taking'&&V.attackerMe){
+    const rk=vRanks();V.myHand.forEach((c,i)=>{if(rk.has(c.r)&&V.table.length<V.limit)set.add(i);});
+  }
+  return set;
+}
+/* Перевірка, чи можна перевести */
+function canTransfer(){
+  if(!V||V.phase!=='play'||mode!=='transfer')return false;
+  if(V.attackerMe)return false;
+  return !!V.transferWindow;
+}
+function statusLine(){
+  if(V.phase==='over')return V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ';
+  if(V.phase==='taking')return V.attackerMe?'Суперник бере карти. Підкиньте або ЗАВЕРШИТИ':'Ви берете карти…';
+  if(V.transferWindow)return V.attackerMe?'Суперник може перевести…':'Можете ПЕРЕВЕСТИ або ДАЛІ';
+  if(V.attackerMe)return undIdx().length?'Суперник відбивається…':'Ваш хід — атакуйте картою';
+  return undIdx().length?'Відбийте карту або ВЗЯТИ':'Суперник готує хід…';
+}
+function render(){
+  if(!V)return;
+  $('statusText').textContent=statusLine();
+  const oz=$('oppZone');oz.innerHTML='';
+if(V.oppHand && V.oppHand.length){
+  /* Гра закінчилась — показуємо справжні карти суперника */
+  for(let i=0;i<V.oppHand.length;i++){
+    const d=document.createElement('div');d.className='card';
+    d.innerHTML='<img src="'+cardImg(V.oppHand[i])+'">';
+    oz.appendChild(d);
+  }
+}else{
+  /* Звичайний режим — показуємо рубашки */
+  for(let i=0;i<Math.max(V.oppCount,0);i++){const d=document.createElement('div');d.className='oppBack';d.innerHTML=BACK_HTML;oz.appendChild(d);}
+}
+
+  const showDeck=V.deckCount>1;
+
+  if(mode==='nosuit'){
+    $('trumpImg').src=BACK;
+    $('trumpImg').style.display=V.deckCount>0?'block':'none';
+  }else{
+    const showTrump=V.trumpCard&&V.deckCount>0;
+    if(showTrump){$('trumpImg').src=cardImg(V.trumpCard);$('trumpImg').style.display='block';}
+    else $('trumpImg').style.display='none';
+  }
+
+  $('deckBack').style.display=showDeck?'block':'none';
+  $('deckCount').textContent=V.deckCount;
+
+  const t=$('table');t.innerHTML='';
+  V.table.forEach((p,i)=>{
+    const s=document.createElement('div');s.className='slot'+(ui.sel===i?' sel':'')+(!p.d&&!V.attackerMe&&V.phase==='play'?' clickable':'');
+    s.innerHTML='<div class="card atk"><img src="'+cardImg(p.a)+'"></div>'+(p.d?'<div class="card def"><img src="'+cardImg(p.d)+'"></div>':'');
+    if(!p.d&&!V.attackerMe&&V.phase==='play')s.onclick=()=>{ui.sel=ui.sel===i?null:i;render();};
+    t.appendChild(s);
+  });
+  const legal=legalSet(),h=$('hand');h.innerHTML='';
+  V.myHand.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='card'+(legal.has(i)?' playable':'');
+    d.innerHTML='<img src="'+cardImg(c)+'">';d.onclick=()=>handClick(i);h.appendChild(d);
+  });
+  $('doneBtn').hidden=!(V.phase==='play'&&V.attackerMe&&V.table.length&&undIdx().length===0&&!V.transferWindow);
+  $('takeBtn').hidden=!(V.phase==='play'&&!V.attackerMe&&undIdx().length>0);
+  $('finishBtn').hidden=!(V.phase==='taking'&&V.attackerMe);
+  $('transferBtn').hidden=!canTransfer();
+  $('passBtn').hidden=!(V.phase==='play'&&!V.attackerMe&&V.transferWindow);
+  applyFit();
+}
+function handClick(i){
+  if(!V||V.phase==='over')return;
+  const c=V.myHand[i],legal=legalSet();
+  if(!legal.has(i)){toast('Зараз цю карту покласти не можна');return;}
+  if(V.phase==='taking'&&V.attackerMe){sendIntent({t:'addTake',card:c});return;}
+  if(V.attackerMe){sendIntent({t:'attack',card:c});return;}
+  const und=undIdx();let target=null;
+  if(ui.sel!==null&&und.includes(ui.sel))target=ui.sel;
+  else if(und.length===1)target=und[0];
+  else{const can=und.filter(x=>beats(c,V.table[x].a,V.trumpSuit));if(can.length===1)target=can[0];}
+  if(target===null){toast('Спершу клікніть карту на столі, яку відбиваєте');return;}
+  if(!beats(c,V.table[target].a,V.trumpSuit)){toast('Ця карта не бʼє');return;}
+  ui.sel=null;sendIntent({t:'defend',idx:target,card:c});
+}
+$('doneBtn').onclick=()=>sendIntent({t:'done'});
+$('takeBtn').onclick=()=>sendIntent({t:'take'});
+$('finishBtn').onclick=()=>sendIntent({t:'finishTake'});
+$('passBtn').onclick=()=>sendIntent({t:'pass'});
+$('transferBtn').onclick=()=>{
+  /* Знаходимо першу карту з руки, яка підходить для переведення */
+  if(!V||!canTransfer())return;
+  const rk=vRanks();
+  const card=V.myHand.find(c=>rk.has(c.r));
+  if(card)sendIntent({t:'transfer',card});
+};
+
+function showOver(){
+  const btns=[];
+  if(isBotGame){
+  btns.push(['НОВА ГРА',()=>{G=newGame(G.first==='host'?'guest':'host');hideOverlay();sync();botThink();}]);
+}else if(isHost){
+  btns.push(['НОВА ГРА',()=>{G=newGame(G.first==='host'?'guest':'host');hideOverlay();sync();}]);
+}
+  btns.push(['У ЛОБІ',reload]);
+  showOverlay(V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ',
+    isHost?'Реванш?':'Очікуйте на нову гру…',btns);
+}
+function showOverlay(title,text,btns){
+  $('ovTitle').textContent=title;$('ovText').textContent=text;
+  const r=$('ovBtns');r.innerHTML='';(btns||[]).forEach(b=>{const x=document.createElement('button');x.textContent=b[0];x.onclick=b[1];r.appendChild(x);});
+  $('overlay').hidden=false;
+}
+function hideOverlay(){$('overlay').hidden=true;}
+let toastT=null;
+function toast(m){const t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity=0,2200);}
+$('botBtn').onclick=()=>{
+  startBotGame();
+};
+</script>
+</body>
+</html>
