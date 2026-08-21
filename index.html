@@ -105,7 +105,7 @@ input::placeholder{color:#6a8a70;letter-spacing:1px}
 }
 .modeBtn:hover{color:var(--accent);background:rgba(0,0,0,.2)}
 .modeBtn.active{color:var(--accent);border-bottom-color:var(--accent)}
-#modeList{display:grid;grid-template-columns:1fr 1fr;gap:2px 6px}
+#modeList{display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;grid-template-rows:repeat(5,auto);gap:2px 6px}
 #modeList .modeBtn{width:100%;padding:10px 8px;font-size:12px}
 
 h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
