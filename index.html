@@ -86,7 +86,7 @@ input::placeholder{color:#6a8a70;letter-spacing:1px}
   padding:34px 38px;
 }
 .modes{
-  display:flex;flex-direction:column;gap:4px;min-width:180px;max-width:220px;
+  display:flex;flex-direction:column;gap:4px;min-width:320px;max-width:380px;
   background:rgba(14,24,17,.92);
   box-shadow:
     inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
@@ -105,8 +105,8 @@ input::placeholder{color:#6a8a70;letter-spacing:1px}
 }
 .modeBtn:hover{color:var(--accent);background:rgba(0,0,0,.2)}
 .modeBtn.active{color:var(--accent);border-bottom-color:var(--accent)}
-#modeList{display:flex;flex-direction:column;gap:4px}
-#modeList .modeBtn{width:100%}
+#modeList{display:flex;flex-wrap:wrap;gap:4px}
+#modeList .modeBtn{width:calc(50% - 2px);flex:0 0 calc(50% - 2px)}
 
 h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 .mats{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
