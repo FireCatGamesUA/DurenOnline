@@ -37,7 +37,6 @@ body::after{content:"";position:fixed;inset:0;background:rgba(5,12,8,.45);pointe
 #lobby,#game{position:relative;z-index:1;min-height:100vh}
 img{image-rendering:pixelated;image-rendering:crisp-edges}
 
-/* ============ ПІКСЕЛЬНА КНОПКА ============ */
 button{
   font-family:'Tiny5',monospace;
   font-size:14px;
@@ -75,7 +74,6 @@ input{
 }
 input::placeholder{color:#6a8a70;letter-spacing:1px}
 
-/* ---------- ЛОБІ ---------- */
 #lobby{display:flex;align-items:center;justify-content:center;padding:20px}
 .lobbyWrap{display:flex;gap:24px;max-width:1000px;width:100%;align-items:flex-start;flex-wrap:wrap;justify-content:center}
 .panel{
@@ -87,7 +85,6 @@ input::placeholder{color:#6a8a70;letter-spacing:1px}
     0 0 0 calc(var(--px)*2) var(--btn-ink);
   padding:34px 38px;
 }
-/* ---------- РЕЖИМИ ---------- */
 .modes{
   display:flex;flex-direction:column;gap:4px;min-width:180px;max-width:220px;
   background:rgba(14,24,17,.92);
@@ -136,7 +133,6 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 .small{font-size:12px;color:#a8c4ae}
 #joinStatus,#hostStatus{margin-top:10px;font-size:13px;color:var(--warn);min-height:18px}
 
-/* ---------- ГРА ---------- */
 #game{display:flex;flex-direction:column;padding:8px 14px;gap:4px;height:100dvh;overflow:hidden}
 #topZone{display:flex;justify-content:center;align-items:flex-start;padding:8px 0 6px;min-height:calc(var(--cw)*1.05)}
 #oppZone{display:flex;align-items:flex-start;gap:0;min-height:calc(var(--cw)*1.05);max-width:100%}
@@ -311,7 +307,6 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 <body>
 <div id="bg"></div>
 
-<!-- ================= ЛОБІ ================= -->
 <div id="lobby">
   <div class="lobbyWrap">
     <div class="panel">
@@ -338,7 +333,6 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
         </div>
       </div>
     </div>
-    <!-- ========= РЕЖИМИ ========= -->
     <div class="modes">
       <h3>РЕЖИМ</h3>
       <div id="modeList"></div>
@@ -346,7 +340,6 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
   </div>
 </div>
 
-<!-- ================= ГРА ================= -->
 <div id="game" hidden>
   <div id="topZone">
     <div class="slotZone" id="trumpSlot"><img id="trumpImg" alt=""></div>
@@ -373,7 +366,6 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 <div id="toast"></div>
 
 <script>
-/* ============ ШЛЯХИ ДО ЗОБРАЖЕНЬ ============ */
 const IMG='';
 const BACK='back.png';
 const BACK_HTML='<img src="'+BACK+'" alt="" onload="this.parentNode.classList.add(\'hasimg\')" onerror="this.remove()">';
@@ -381,20 +373,23 @@ const SUITS=['c','d','h','s'];
 const RANKS=[6,7,8,9,10,11,12,13,14];
 const MATS=[['foyer','card_mat_foyer.png','Фоє'],['basement','card_mat_basement.png','Підвал'],
             ['office','card_mat_landlords_office.png','Кабінет'],['lounge','card_mat_lounge.png','Лаундж']];
-/* Режими: classic, balance, nosuit, transfer, negative */
 const MODES=[
   ['classic','КЛАСИЧНИЙ'],
   ['balance','БАЛАНС'],
   ['nosuit','БЕЗ МАСТІ'],
   ['transfer','ПЕРЕВІДНИЙ'],
-  ['negative','НЕГАТИВ']
+  ['negative','НЕГАТИВ'],
+  ['blitz','БЛІЦ'],
+  ['transparent','ПРОЗОРИЙ'],
+  ['exchange','ОБМІН'],
+  ['unstable','НЕСТАБІЛЬНИЙ'],
+  ['wild','ДИКІСТЬ']
 ];
 const SLOTS={L:{x:27.5,y:10,w:9},R:{x:63.6,y:10,w:9.2}};
 const cardImg=c=>mode==='nosuit'?IMG+c.r+'n.png':IMG+c.r+c.s+'.png';
 const $=id=>document.getElementById(id);
 $('deckBack').innerHTML=BACK_HTML+$('deckBack').innerHTML;
 
-/* -------- Режим гри -------- */
 let mode=localStorage.getItem('durakMode')||'classic';
 function renderModes(){
   document.querySelectorAll('.modeBtn').forEach(b=>
@@ -415,7 +410,6 @@ MODES.forEach(m=>{
 });
 renderModes();
 
-/* -------- стискання рядів карт -------- */
 function fitRow(el,w,avail,minStep,step0){
   const n=el.children.length;
   if(n<2)return;
@@ -471,7 +465,6 @@ let peer=null,conn=null,isHost=false,roomCode='',joined=false,gameShown=false;
 let isBotGame=false;
 let botTimer=null;
 
-/* -------- ЛОГІКА БОТА -------- */
 function botThink(){
   if(!isBotGame||!G||G.phase==='over')return;
   clearTimeout(botTimer);
@@ -481,38 +474,29 @@ function botAct(){
   if(!G||G.phase==='over')return;
   const botSeat='guest', playerSeat='host';
 
-  /* Фаза "taking" — бот може лише чекати або підкидати якщо він атакуючий */
   if(G.phase==='taking'){
     if(G.attacker===botSeat){
-      /* Бот атакуючий — підкидати чи завершувати? */
       const rk=tableRanks();
       const playable=G.hands[botSeat].filter(c=>rk.has(c.r));
-      /* Підкидаємо тільки дешеві карти і якщо ліміт дозволяє */
       if(playable.length && G.table.length<G.limit){
-        /* Сортуємо за зростанням, не-козирі першими */
         playable.sort((a,b)=>{
           const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
           if(aT!==bT)return aT-bT;
           return a.r-b.r;
         });
         const c=playable[0];
-        /* Підкидаємо лише якщо карта не козир або у суперника багато карт */
         if(c.s!==G.trumpSuit || G.hands[playerSeat].length>=4){
           applyIntent(botSeat,{t:'addTake',card:c});sync();botThink();return;
         }
       }
-      /* Завершуємо хід */
       applyIntent(botSeat,{t:'finishTake'});sync();botThink();return;
     }
-    /* Бот захисник у фазі taking — нічого не робимо, чекаємо */
     return;
   }
 
-  /* Фаза "play" */
   if(G.phase==='play'){
-    /* Вікно переведення: атакуючий чекає, захисник вирішує */
     if(G.transferWindow){
-      if(G.attacker===botSeat)return; /* бот-атакуючий терпляче чекає */
+      if(G.attacker===botSeat)return;
       const rk=tableRanks();
       const tr=G.hands[botSeat].find(c=>rk.has(c.r));
       if(tr && G.hands[playerSeat].length>=G.table.length){
@@ -521,19 +505,15 @@ function botAct(){
       applyIntent(botSeat,{t:'pass'});sync();botThink();return;
     }
     if(G.attacker===botSeat){
-      /* Бот АТАКУЄ */
       const undefended=G.table.some(p=>!p.d);
-      if(undefended){
-        /* Чекаємо поки суперник відіб'ється — нічого не робимо */
-        return;
-      }
-      /* Усі відбиті або стіл порожній */
+      if(undefended)return;
       if(G.table.length===0){
-        /* Перша атака: граємо найменшою не-козирною, інакше козирною */
         const hand=[...G.hands[botSeat]];
         hand.sort((a,b)=>{
           const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+          const aW=mode==='wild'&&a.r===G.wildRank?0:1, bW=mode==='wild'&&b.r===G.wildRank?0:1;
           if(aT!==bT)return aT-bT;
+          if(aW!==bW)return aW-bW;
           return a.r-b.r;
         });
         if(hand.length){
@@ -541,7 +521,6 @@ function botAct(){
         }
         return;
       }
-      /* Є відбиті карти — можна підкидати або завершити хід */
       const rk=tableRanks();
       const playable=G.hands[botSeat].filter(c=>rk.has(c.r));
       if(playable.length && G.table.length<G.limit && G.hands[playerSeat].length>G.table.length){
@@ -555,14 +534,10 @@ function botAct(){
           applyIntent(botSeat,{t:'attack',card:c});sync();botThink();return;
         }
       }
-      /* Завершуємо хід — бито */
       applyIntent(botSeat,{t:'done'});sync();botThink();return;
     }else{
-      /* Бот ЗАХИЩАЄТЬСЯ */
       const undefended=G.table.map((p,i)=>p.d?null:i).filter(x=>x!==null);
       if(undefended.length===0){
-        /* Все відбито — чекаємо підкидання або БИТО від суперника */
-        /* Перевіряємо переведення в режимі transfer */
         if(mode==='transfer' && G.table.length){
           const rk=tableRanks();
           const transferCard=G.hands[botSeat].find(c=>rk.has(c.r));
@@ -572,26 +547,19 @@ function botAct(){
         }
         return;
       }
-      /* Пробуємо відбити першу небиту карту */
       const idx=undefended[0];
       const atkCard=G.table[idx].a;
-      /* Шукаємо найдешевшу карту, що б'є */
-      const candidates=G.hands[botSeat].filter(c=>beats(c,atkCard,G.trumpSuit));
+      const candidates=G.hands[botSeat].filter(c=>beats(c,atkCard,G.trumpSuit,G.wildRank));
       if(candidates.length===0){
-        /* Не можемо відбити — беремо */
         applyIntent(botSeat,{t:'take'});sync();botThink();return;
       }
-      /* Сортуємо: не-козирі першими, потім за номіналом */
       candidates.sort((a,b)=>{
         const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
         if(aT!==bT)return aT-bT;
         return a.r-b.r;
       });
-      /* Якщо є варіант не козирем — беремо його. Якщо тільки козир і атака не козир — беремо тільки якщо номінал прийнятний */
       const chosen=candidates[0];
-      /* Захист дорогим козирем від не-козиря — лише якщо більше нічим і карт мало */
       if(chosen.s===G.trumpSuit && atkCard.s!==G.trumpSuit && chosen.r>=12 && G.hands[botSeat].length>=3){
-        /* Краще взяти, ніж витрачати старший козир */
         applyIntent(botSeat,{t:'take'});sync();botThink();return;
       }
       applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
@@ -645,7 +613,6 @@ if(d.t==='mode'&&!isHost){
   if(d.t==='intent'&&isHost){applyIntent('guest',d.m);sync();}
   if(d.t==='view'&&!isHost){
   V=d.v;
-  /* Оновлюємо режим з отриманого стану гри */
   if(V.mode){
     mode=V.mode;
     localStorage.setItem('durakMode',mode);
@@ -664,13 +631,17 @@ $('startBtn').onclick=()=>{isHost=true;G=newGame('auto');showGame();layoutMat();
 
 let G=null;
 const defSeat=()=>G.attacker==='host'?'guest':'host';
-/* -------- ЛОГІКА «ХТО КОГО Б'Є» -------- */
-function beats(d,a,t){
+function beats(d,a,t,wildRank){
   if(mode==='nosuit'){
     if(d.r===6&&a.r===14)return true;
     return d.r>=a.r;
   }
   if(mode==='balance'&&d.r===6&&a.r===14&&d.s===a.s)return true;
+  if(mode==='wild'&&wildRank){
+    if(d.r===wildRank&&a.r!==wildRank)return true;
+    if(d.r===wildRank&&a.r===wildRank)return true;
+    if(a.r===wildRank)return false;
+  }
   return (d.s===a.s&&d.r>a.r)||(d.s===t&&a.s!==t);
 }
 const tableRanks=()=>{const s=new Set();G.table.forEach(p=>{s.add(p.a.r);if(p.d)s.add(p.d.r);});return s;};
@@ -687,16 +658,18 @@ function badDeal(hands){
   return false;
 }
 function newGame(first){
+  const handSize=mode==='blitz'?3:6;
   let deck,hands,tries=0;
   do{
     deck=[];SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s})));
     for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
-    hands={host:deck.splice(0,6),guest:deck.splice(0,6)};
+    hands={host:deck.splice(0,handSize),guest:deck.splice(0,handSize)};
     tries++;
   }while(tries<100&&badDeal(hands));
+  const wildRank=mode==='wild'?RANKS[Math.floor(Math.random()*RANKS.length)]:null;
   G={deck,hands,table:[],discard:[],
-     trumpCard:null,trumpSuit:null,attacker:first,phase:'play',winner:null,limit:6,first:null,
-     transferWindow:false};
+     trumpCard:null,trumpSuit:null,attacker:first,phase:'play',winner:null,limit:mode==='blitz'?3:6,first:null,
+     transferWindow:false,wildRank};
   if(mode!=='nosuit'){
     G.trumpCard=G.deck[G.deck.length-1]||null;
     G.trumpSuit=G.trumpCard?G.trumpCard.s:null;
@@ -712,26 +685,55 @@ function newGame(first){
   }
   G.first=G.attacker;beginTurn();return G;
 }
-function beginTurn(){G.phase='play';G.table=[];G.transferWindow=false;G.limit=Math.min(6,G.hands[defSeat()].length||6);}
+function beginTurn(){G.phase='play';G.table=[];G.transferWindow=false;G.limit=mode==='blitz'?3:Math.min(6,G.hands[defSeat()].length||6);}
 function refill(){
   const seats=[G.attacker,defSeat()];
+  const target=mode==='blitz'?3:6;
   let changed=true;
   while(changed&&G.deck.length){
     changed=false;
     for(const s of seats){
-      if(G.hands[s].length<6&&G.deck.length){
+      if(G.hands[s].length<target&&G.deck.length){
         G.hands[s].push(G.deck.shift());
         changed=true;
       }
     }
   }
 }
-function checkEnd(){if(!G.deck.length){const h=G.hands.host.length,g=G.hands.guest.length;
-  if(h===0&&g===0){G.phase='over';G.winner='draw';}
-  else if(h===0){G.phase='over';G.winner='host';}
-  else if(g===0){G.phase='over';G.winner='guest';}}}
-function resolveTake(){const d=defSeat();G.table.forEach(p=>{G.hands[d].push(p.a);if(p.d)G.hands[d].push(p.d);});
-  G.table=[];refill();checkEnd();if(G.phase!=='over')beginTurn();return OK;}
+function checkEnd(){
+  if(!G.deck.length){
+    const h=G.hands.host.length,g=G.hands.guest.length;
+    if(mode==='negative'){
+      if(h===0&&g===0){G.phase='over';G.winner='draw';}
+      else if(h===0){G.phase='over';G.winner='guest';}
+      else if(g===0){G.phase='over';G.winner='host';}
+    }else{
+      if(h===0&&g===0){G.phase='over';G.winner='draw';}
+      else if(h===0){G.phase='over';G.winner='host';}
+      else if(g===0){G.phase='over';G.winner='guest';}
+    }
+  }
+}
+function resolveTake(){
+  const d=defSeat();
+  G.table.forEach(p=>{G.hands[d].push(p.a);if(p.d)G.hands[d].push(p.d);});
+  G.table=[];
+  if(mode==='unstable'&&G.deck.length){
+    const suits=['c','d','h','s'];
+    G.trumpSuit=suits[Math.floor(Math.random()*suits.length)];
+    const trumpCard=G.deck.find(c=>c.s===G.trumpSuit);
+    if(trumpCard)G.trumpCard=trumpCard;
+  }
+  if(mode==='exchange'&&G.hands.host.length&&G.hands.guest.length){
+    const temp=G.hands.host;
+    G.hands.host=G.hands.guest;
+    G.hands.guest=temp;
+  }
+  refill();
+  checkEnd();
+  if(G.phase!=='over')beginTurn();
+  return OK;
+}
 
 function applyIntent(seat,m){
   if(!G||G.phase==='over')return err('Гру завершено');
@@ -749,10 +751,8 @@ function applyIntent(seat,m){
     if(seat!==def||G.phase!=='play')return err('Зараз не можна відбиватись');
     const p=G.table[m.idx];if(!p||p.d)return err('Ця атака вже відбита');
     const c=findCard(G.hands[seat],m.card);if(!c)return err('Немає такої карти');
-    if(!beats(c,p.a,G.trumpSuit))return err('Ця карта не бʼє');
+    if(!beats(c,p.a,G.trumpSuit,G.wildRank))return err('Ця карта не бʼє');
     G.hands[seat].splice(G.hands[seat].indexOf(c),1);p.d=c;
-    /* Перевідний: все відбито і є карта для переведення — відкриваємо вікно,
-       атакуючий чекає, поки захисник переведе або скаже ДАЛІ */
     if(mode==='transfer' && !G.table.some(x=>!x.d)){
       const rk=tableRanks();
       if(G.hands[seat].some(x=>rk.has(x.r)) && G.hands[G.attacker].length>=G.table.length){
@@ -761,32 +761,24 @@ function applyIntent(seat,m){
     }
     return OK;
   }
-  /* ПЕРЕВЕДЕННЯ: захисник кладе карту того ж номіналу, ролі міняються */
   if(m.t==='transfer'){
     if(mode!=='transfer')return err('Переведення доступне лише в режимі "Перевідний"');
     if(seat!==def||G.phase!=='play')return err('Зараз не можна перевести');
     if(!G.transferWindow)return err('Зараз не можна перевести');
     const c=findCard(G.hands[seat],m.card);if(!c)return err('Немає такої карти');
-    /* Карта для переведення має мати той самий номінал, що й карти на столі */
     const rk=tableRanks();
     if(!rk.has(c.r))return err('Карта для переведення має бути того ж номіналу');
-    /* Перевіряємо, чи в нового захисника достатньо карт */
     const newDef=G.attacker;
     const cardsOnTable=G.table.length;
     if(G.hands[newDef].length<cardsOnTable)return err('У суперника недостатньо карт для переведення');
-    /* Виконуємо переведення */
     G.hands[seat].splice(G.hands[seat].indexOf(c),1);
-    /* Карта переведення стає новою атакувальною картою */
     G.table.push({a:c,d:null});
-    /* Міняємо ролі: захисник стає атакуючим, атакуючий — захисником */
     const oldAttacker=G.attacker;
     G.attacker=def;
     G.transferWindow=false;
-    /* Оновлюємо ліміт для нового захисника */
-    G.limit=Math.min(6,G.hands[G.attacker].length||6);
+    G.limit=mode==='blitz'?3:Math.min(6,G.hands[G.attacker].length||6);
     return OK;
   }
-  /* ДАЛІ — захисник відмовляється від переведення */
   if(m.t==='pass'){
     if(mode!=='transfer')return err('Недоступно в цьому режимі');
     if(seat!==def||G.phase!=='play')return err('Не ваш хід');
@@ -812,19 +804,39 @@ function applyIntent(seat,m){
     if(G.transferWindow)return err('Суперник може перевести — зачекайте');
     if(!G.table.length||G.table.some(p=>!p.d))return err('Ще є небиті карти');
     G.table.forEach(p=>{G.discard.push(p.a,p.d);});G.table=[];
-    G.attacker=def;refill();checkEnd();if(G.phase!=='over')beginTurn();return OK;
+    G.attacker=def;
+    if(mode==='unstable'&&G.deck.length){
+      const suits=['c','d','h','s'];
+      G.trumpSuit=suits[Math.floor(Math.random()*suits.length)];
+      const trumpCard=G.deck.find(c=>c.s===G.trumpSuit);
+      if(trumpCard)G.trumpCard=trumpCard;
+    }
+    if(mode==='exchange'&&G.hands.host.length&&G.hands.guest.length){
+      const temp=G.hands.host;
+      G.hands.host=G.hands.guest;
+      G.hands.guest=temp;
+    }
+    refill();checkEnd();if(G.phase!=='over')beginTurn();return OK;
   }
   return err('Невідома дія');
 }
 function makeView(seat){
   const opp=seat==='host'?'guest':'host';let result=null;
-  if(G.phase==='over')result=G.winner==='draw'?'draw':(G.winner===seat?'win':'lose');
+  if(G.phase==='over'){
+    if(mode==='negative'){
+      result=G.winner==='draw'?'draw':(G.winner===seat?'lose':'win');
+    }else{
+      result=G.winner==='draw'?'draw':(G.winner===seat?'win':'lose');
+    }
+  }
   const view={myHand:[...G.hands[seat]].sort((a,b)=>(SUITS.indexOf(a.s)-SUITS.indexOf(b.s))||(a.r-b.r)),
     oppCount:G.hands[opp].length,table:G.table,deckCount:G.deck.length,trumpCard:G.trumpCard,
     trumpSuit:G.trumpSuit,attackerMe:G.attacker===seat,phase:G.phase,limit:G.limit,result,mode,
-    transferWindow:!!G.transferWindow};
-  /* Коли гра закінчилась — показуємо карти суперника */
+    transferWindow:!!G.transferWindow,wildRank:G.wildRank};
   if(G.phase==='over' && G.hands[opp].length){
+    view.oppHand=[...G.hands[opp]].sort((a,b)=>(SUITS.indexOf(a.s)-SUITS.indexOf(b.s))||(a.r-b.r));
+  }
+  if(mode==='transparent'){
     view.oppHand=[...G.hands[opp]].sort((a,b)=>(SUITS.indexOf(a.s)-SUITS.indexOf(b.s))||(a.r-b.r));
   }
   return view;
@@ -860,20 +872,22 @@ function legalSet(){
   if(V.phase==='play'&&V.attackerMe&&undIdx().length===0&&V.table.length<V.limit&&!V.transferWindow){
     const rk=vRanks();V.myHand.forEach((c,i)=>{if(!V.table.length||rk.has(c.r))set.add(i);});
   }else if(V.phase==='play'&&!V.attackerMe){
-    const und=undIdx();V.myHand.forEach((c,i)=>{if(und.some(idx=>beats(c,V.table[idx].a,V.trumpSuit)))set.add(i);});
+    const und=undIdx();V.myHand.forEach((c,i)=>{if(und.some(idx=>beats(c,V.table[idx].a,V.trumpSuit,V.wildRank)))set.add(i);});
   }else if(V.phase==='taking'&&V.attackerMe){
     const rk=vRanks();V.myHand.forEach((c,i)=>{if(rk.has(c.r)&&V.table.length<V.limit)set.add(i);});
   }
   return set;
 }
-/* Перевірка, чи можна перевести */
 function canTransfer(){
   if(!V||V.phase!=='play'||mode!=='transfer')return false;
   if(V.attackerMe)return false;
   return !!V.transferWindow;
 }
 function statusLine(){
-  if(V.phase==='over')return V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ';
+  if(V.phase==='over'){
+    if(mode==='negative')return V.result==='win'?'ПЕРЕМОГА (ви дурень!)':V.result==='lose'?'ПРОГРАШ (ви вийшли)':'НІЧИЯ';
+    return V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ';
+  }
   if(V.phase==='taking')return V.attackerMe?'Суперник бере карти. Підкиньте або ЗАВЕРШИТИ':'Ви берете карти…';
   if(V.transferWindow)return V.attackerMe?'Суперник може перевести…':'Можете ПЕРЕВЕСТИ або ДАЛІ';
   if(V.attackerMe)return undIdx().length?'Суперник відбивається…':'Ваш хід — атакуйте картою';
@@ -883,17 +897,15 @@ function render(){
   if(!V)return;
   $('statusText').textContent=statusLine();
   const oz=$('oppZone');oz.innerHTML='';
-if(V.oppHand && V.oppHand.length){
-  /* Гра закінчилась — показуємо справжні карти суперника */
-  for(let i=0;i<V.oppHand.length;i++){
-    const d=document.createElement('div');d.className='card';
-    d.innerHTML='<img src="'+cardImg(V.oppHand[i])+'">';
-    oz.appendChild(d);
+  if(V.oppHand && V.oppHand.length){
+    for(let i=0;i<V.oppHand.length;i++){
+      const d=document.createElement('div');d.className='card';
+      d.innerHTML='<img src="'+cardImg(V.oppHand[i])+'">';
+      oz.appendChild(d);
+    }
+  }else{
+    for(let i=0;i<Math.max(V.oppCount,0);i++){const d=document.createElement('div');d.className='oppBack';d.innerHTML=BACK_HTML;oz.appendChild(d);}
   }
-}else{
-  /* Звичайний режим — показуємо рубашки */
-  for(let i=0;i<Math.max(V.oppCount,0);i++){const d=document.createElement('div');d.className='oppBack';d.innerHTML=BACK_HTML;oz.appendChild(d);}
-}
 
   const showDeck=V.deckCount>1;
 
@@ -937,9 +949,9 @@ function handClick(i){
   const und=undIdx();let target=null;
   if(ui.sel!==null&&und.includes(ui.sel))target=ui.sel;
   else if(und.length===1)target=und[0];
-  else{const can=und.filter(x=>beats(c,V.table[x].a,V.trumpSuit));if(can.length===1)target=can[0];}
+  else{const can=und.filter(x=>beats(c,V.table[x].a,V.trumpSuit,V.wildRank));if(can.length===1)target=can[0];}
   if(target===null){toast('Спершу клікніть карту на столі, яку відбиваєте');return;}
-  if(!beats(c,V.table[target].a,V.trumpSuit)){toast('Ця карта не бʼє');return;}
+  if(!beats(c,V.table[target].a,V.trumpSuit,V.wildRank)){toast('Ця карта не бʼє');return;}
   ui.sel=null;sendIntent({t:'defend',idx:target,card:c});
 }
 $('doneBtn').onclick=()=>sendIntent({t:'done'});
@@ -947,7 +959,6 @@ $('takeBtn').onclick=()=>sendIntent({t:'take'});
 $('finishBtn').onclick=()=>sendIntent({t:'finishTake'});
 $('passBtn').onclick=()=>sendIntent({t:'pass'});
 $('transferBtn').onclick=()=>{
-  /* Знаходимо першу карту з руки, яка підходить для переведення */
   if(!V||!canTransfer())return;
   const rk=vRanks();
   const card=V.myHand.find(c=>rk.has(c.r));
@@ -957,12 +968,13 @@ $('transferBtn').onclick=()=>{
 function showOver(){
   const btns=[];
   if(isBotGame){
-  btns.push(['НОВА ГРА',()=>{G=newGame(G.first==='host'?'guest':'host');hideOverlay();sync();botThink();}]);
-}else if(isHost){
-  btns.push(['НОВА ГРА',()=>{G=newGame(G.first==='host'?'guest':'host');hideOverlay();sync();}]);
-}
+    btns.push(['НОВА ГРА',()=>{G=newGame(G.first==='host'?'guest':'host');hideOverlay();sync();botThink();}]);
+  }else if(isHost){
+    btns.push(['НОВА ГРА',()=>{G=newGame(G.first==='host'?'guest':'host');hideOverlay();sync();}]);
+  }
   btns.push(['У ЛОБІ',reload]);
-  showOverlay(V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ',
+  const title=mode==='negative'?(V.result==='win'?'ПЕРЕМОГА (ви дурень!)':V.result==='lose'?'ПРОГРАШ (ви вийшли)':'НІЧИЯ'):(V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ');
+  showOverlay(title,
     isHost?'Реванш?':'Очікуйте на нову гру…',btns);
 }
 function showOverlay(title,text,btns){
