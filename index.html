@@ -809,10 +809,13 @@ function applyIntent(seat,m){
     G.table.forEach(p=>{G.discard.push(p.a,p.d);});G.table=[];
     G.attacker=def;
     if(mode==='unstable'&&G.deck.length){
-      const suits=['c','d','h','s'];
-      G.trumpSuit=suits[Math.floor(Math.random()*suits.length)];
-      const trumpCard=G.deck.find(c=>c.s===G.trumpSuit);
-      if(trumpCard)G.trumpCard=trumpCard;
+      /* новий козир — випадкова карта з колоди; її масть стає козирною.
+         Пересуваємо її на низ колоди, щоб показ завжди збігався з логікою */
+      const i=Math.floor(Math.random()*G.deck.length);
+      const tc=G.deck.splice(i,1)[0];
+      G.deck.push(tc);
+      G.trumpCard=tc;
+      G.trumpSuit=tc.s;
     }
     if(mode==='exchange'&&G.hands.host.length&&G.hands.guest.length){
       const temp=G.hands.host;
