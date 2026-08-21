@@ -910,17 +910,24 @@ function render(){
     for(let i=0;i<Math.max(V.oppCount,0);i++){const d=document.createElement('div');d.className='oppBack';d.innerHTML=BACK_HTML;oz.appendChild(d);}
   }
 
-  const showDeck=V.deckCount>1;
+  /* "Дикість": рубашка колоди замінюється на зображення дикої карти (як у "Без масті"),
+     і лишається видно всю гру. "Нестабільний": козир видно навіть коли колода закінчилась. */
+  const showDeck=(mode==='wild')?true:(V.deckCount>1);
 
   if(mode==='nosuit'){
     $('trumpImg').src=BACK;
     $('trumpImg').style.display=V.deckCount>0?'block':'none';
+  }else if(mode==='unstable'){
+    if(V.trumpCard){$('trumpImg').src=cardImg(V.trumpCard);$('trumpImg').style.display='block';}
+    else $('trumpImg').style.display='none';
   }else{
     const showTrump=V.trumpCard&&V.deckCount>0;
     if(showTrump){$('trumpImg').src=cardImg(V.trumpCard);$('trumpImg').style.display='block';}
     else $('trumpImg').style.display='none';
   }
 
+  const deckImgEl=$('deckBack').querySelector('img');
+  if(deckImgEl)deckImgEl.src=(mode==='wild'&&V.wildRank)?IMG+V.wildRank+'n.png':BACK;
   $('deckBack').style.display=showDeck?'block':'none';
   $('deckCount').textContent=V.deckCount;
 
