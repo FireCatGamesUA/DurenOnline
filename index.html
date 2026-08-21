@@ -910,7 +910,11 @@ function render(){
       oz.appendChild(d);
     }
   }else{
-    for(let i=0;i<Math.max(V.oppCount,0);i++){const d=document.createElement('div');d.className='oppBack';d.innerHTML=BACK_HTML;oz.appendChild(d);}
+    for(let i=0;i<Math.max(V.oppCount,0);i++){
+      const d=document.createElement('div');d.className='card';
+      d.innerHTML='<img src="'+BACK+'">';
+      oz.appendChild(d);
+    }
   }
 
   /* "Дикість": рубашка колоди замінюється на зображення дикої карти (як у "Без масті"),
