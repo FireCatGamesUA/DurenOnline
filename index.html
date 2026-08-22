@@ -499,12 +499,9 @@ function botAct(){
           });
         }
         const c=playable[0];
-        /* У негативі: якщо у суперника вже 11+ карт — не підкидаємо, бо він програє (що погано для нас) */
+        /* У негативі: суперник узяв — він МУСИТЬ забрати все, що підкинуть атакуючий.
+           Тому підкидаємо якомога більше (найстарші), щоб проштовхнути його за ліміт 12. */
         if(isNeg){
-          if(G.hands[playerSeat].length>=11){
-            /* Суперник близький до програшу — не допомагаємо йому */
-            applyIntent(botSeat,{t:'finishTake'});sync();botThink();return;
-          }
           applyIntent(botSeat,{t:'addTake',card:c});sync();botThink();return;
         }
         if(c.s!==G.trumpSuit || G.hands[playerSeat].length>=4){
@@ -594,22 +591,24 @@ function botAct(){
       const candidates=G.hands[botSeat].filter(c=>beats(c,atkCard,G.trumpSuit,G.wildRank));
       
       if(isNeg){
-        /* У негативі: якщо атака дрібна (≤10) — беремо, бо це вигідно (додає карти).
-           АЛЕ якщо у нас вже 11+ карт — не беремо, бо перевищимо ліміт 12 */
-        if(G.hands[botSeat].length>=11){
-          /* Критично багато карт — мусимо відбиватися або якщо нічим, то програш */
-          if(candidates.length===0){
-            applyIntent(botSeat,{t:'take'});sync();botThink();return;
+        /* Оцінюємо ризик: якщо візьмемо, суперник може підкинути ще до ліміту (G.limit).
+           Тому беремо лише тоді, коли навіть повне підкидання не перевищить 12. */
+        const safeToTake=G.hands[botSeat].length+G.limit<=12;
+        if(!safeToTake){
+          /* Небезпечно брати — відбиваємося, якщо є чим */
+          if(candidates.length>0){
+            candidates.sort((a,b)=>{
+              const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+              if(aT!==bT)return aT-bT;
+              return a.r-b.r;
+            });
+            const chosen=candidates[0];
+            applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
           }
-          candidates.sort((a,b)=>{
-            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
-            if(aT!==bT)return aT-bT;
-            return a.r-b.r;
-          });
-          const chosen=candidates[0];
-          applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
+          /* Нічим відбити — доведеться брати */
+          applyIntent(botSeat,{t:'take'});sync();botThink();return;
         }
-        /* Звичайна логіка: дрібна атака — беремо */
+        /* Безпечно: дрібна атака — беремо (накопичуємо карти) */
         if(atkCard.r<=10 || candidates.length===0){
           applyIntent(botSeat,{t:'take'});sync();botThink();return;
         }
