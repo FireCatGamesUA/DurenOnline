@@ -499,7 +499,15 @@ function botAct(){
           });
         }
         const c=playable[0];
-        if(isNeg || c.s!==G.trumpSuit || G.hands[playerSeat].length>=4){
+        /* У негативі: якщо у суперника вже 11+ карт — не підкидаємо, бо він програє (що погано для нас) */
+        if(isNeg){
+          if(G.hands[playerSeat].length>=11){
+            /* Суперник близький до програшу — не допомагаємо йому */
+            applyIntent(botSeat,{t:'finishTake'});sync();botThink();return;
+          }
+          applyIntent(botSeat,{t:'addTake',card:c});sync();botThink();return;
+        }
+        if(c.s!==G.trumpSuit || G.hands[playerSeat].length>=4){
           applyIntent(botSeat,{t:'addTake',card:c});sync();botThink();return;
         }
       }
@@ -587,7 +595,21 @@ function botAct(){
       
       if(isNeg){
         /* У негативі: якщо атака дрібна (≤10) — беремо, бо це вигідно (додає карти).
-           Відбиваємося тільки якщо атака сильна (туз/король/дама) */
+           АЛЕ якщо у нас вже 11+ карт — не беремо, бо перевищимо ліміт 12 */
+        if(G.hands[botSeat].length>=11){
+          /* Критично багато карт — мусимо відбиватися або якщо нічим, то програш */
+          if(candidates.length===0){
+            applyIntent(botSeat,{t:'take'});sync();botThink();return;
+          }
+          candidates.sort((a,b)=>{
+            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+            if(aT!==bT)return aT-bT;
+            return a.r-b.r;
+          });
+          const chosen=candidates[0];
+          applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
+        }
+        /* Звичайна логіка: дрібна атака — беремо */
         if(atkCard.r<=10 || candidates.length===0){
           applyIntent(botSeat,{t:'take'});sync();botThink();return;
         }
