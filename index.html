@@ -272,11 +272,11 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
   #joinStatus,#hostStatus{font-size:12px}
   #statusText{font-size:13px;padding:6px 4px}
   #game{padding:6px 8px;gap:2px}
-  #topZone{gap:10px;padding-top:6px;align-items:center}
-  #oppZone{margin-top:0;align-items:center}
+  #topZone{gap:10px;padding-top:6px;align-items:flex-start}
+  #oppZone{margin-top:0;align-items:flex-start}
   .slotZone{position:static}
-  .slotZone img{width:calc(var(--cw)*.9)}
-  .slotZone .card.back{width:calc(var(--cw)*.9);height:calc(var(--cw)*1.26);aspect-ratio:auto}
+  .slotZone img{width:calc(var(--cw)*.9);height:auto;aspect-ratio:66/100}
+  .slotZone .card.back{width:calc(var(--cw)*.9);height:auto;aspect-ratio:66/100}
   .oppBack{margin-left:calc(var(--cw)*-.35)}
     #oppZone .card{margin-left:calc(var(--cw)*-.35)}
   #mid{padding:4px 0;min-height:calc(var(--cw)*1.9)}
@@ -756,9 +756,9 @@ function checkEnd(){
   const h=G.hands.host.length,g=G.hands.guest.length;
   /* У негативі: якщо в гравця більше 18 карт — він програв (занадто багато набрав) */
   if(mode==='negative'){
-    if(h>18&&g>18){G.phase='over';G.winner='draw';return;}
-    if(h>18){G.phase='over';G.winner='guest';return;}
-    if(g>18){G.phase='over';G.winner='host';return;}
+    if(h>12&&g>12){G.phase='over';G.winner='draw';return;}
+    if(h>12){G.phase='over';G.winner='guest';return;}
+    if(g>12){G.phase='over';G.winner='host';return;}
   }
   if(!G.deck.length){
     if(mode==='negative'){
