@@ -753,8 +753,14 @@ function refill(){
   }
 }
 function checkEnd(){
+  const h=G.hands.host.length,g=G.hands.guest.length;
+  /* У негативі: якщо в гравця більше 18 карт — він програв (занадто багато набрав) */
+  if(mode==='negative'){
+    if(h>18&&g>18){G.phase='over';G.winner='draw';return;}
+    if(h>18){G.phase='over';G.winner='guest';return;}
+    if(g>18){G.phase='over';G.winner='host';return;}
+  }
   if(!G.deck.length){
-    const h=G.hands.host.length,g=G.hands.guest.length;
     if(mode==='negative'){
       if(h===0&&g===0){G.phase='over';G.winner='draw';}
       else if(h===0){G.phase='over';G.winner='guest';}
@@ -936,7 +942,6 @@ function canTransfer(){
 }
 function statusLine(){
   if(V.phase==='over'){
-    if(mode==='negative')return V.result==='win'?'ПЕРЕМОГА (ви дурень!)':V.result==='lose'?'ПРОГРАШ (ви вийшли)':'НІЧИЯ';
     return V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ';
   }
   if(V.phase==='taking')return V.attackerMe?'Суперник бере карти. Підкиньте або ЗАВЕРШИТИ':'Ви берете карти…';
@@ -1035,7 +1040,7 @@ function showOver(){
     btns.push(['НОВА ГРА',()=>{G=newGame(G.first==='host'?'guest':'host');hideOverlay();sync();}]);
   }
   btns.push(['У ЛОБІ',reload]);
-  const title=mode==='negative'?(V.result==='win'?'ПЕРЕМОГА (ви дурень!)':V.result==='lose'?'ПРОГРАШ (ви вийшли)':'НІЧИЯ'):(V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ');
+    const title=V.result==='win'?'ПЕРЕМОГА':V.result==='lose'?'ПРОГРАШ':'НІЧИЯ';
   showOverlay(title,
     isHost?'Реванш?':'Очікуйте на нову гру…',btns);
 }
