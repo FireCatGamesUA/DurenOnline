@@ -476,19 +476,30 @@ function botThink(){
 function botAct(){
   if(!G||G.phase==='over')return;
   const botSeat='guest', playerSeat='host';
+  const isNeg=mode==='negative';
 
   if(G.phase==='taking'){
     if(G.attacker===botSeat){
       const rk=tableRanks();
       const playable=G.hands[botSeat].filter(c=>rk.has(c.r));
       if(playable.length && G.table.length<G.limit){
-        playable.sort((a,b)=>{
-          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
-          if(aT!==bT)return aT-bT;
-          return a.r-b.r;
-        });
+        if(isNeg){
+          /* У негативі підкидаємо найстарші карти, щоб суперник набрав багато */
+          playable.sort((a,b)=>{
+            if(a.r!==b.r)return b.r-a.r; /* старші першими */
+            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+            return aT-bT;
+          });
+        }else{
+          /* У класиці — найдешевші */
+          playable.sort((a,b)=>{
+            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+            if(aT!==bT)return aT-bT;
+            return a.r-b.r;
+          });
+        }
         const c=playable[0];
-        if(c.s!==G.trumpSuit || G.hands[playerSeat].length>=4){
+        if(isNeg || c.s!==G.trumpSuit || G.hands[playerSeat].length>=4){
           applyIntent(botSeat,{t:'addTake',card:c});sync();botThink();return;
         }
       }
@@ -512,13 +523,22 @@ function botAct(){
       if(undefended)return;
       if(G.table.length===0){
         const hand=[...G.hands[botSeat]];
-        hand.sort((a,b)=>{
-          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
-          const aW=mode==='wild'&&a.r===G.wildRank?0:1, bW=mode==='wild'&&b.r===G.wildRank?0:1;
-          if(aT!==bT)return aT-bT;
-          if(aW!==bW)return aW-bW;
-          return a.r-b.r;
-        });
+        if(isNeg){
+          /* У негативі атакуємо найстаршими картами, щоб змусити суперника брати */
+          hand.sort((a,b)=>{
+            if(a.r!==b.r)return b.r-a.r; /* старші першими */
+            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+            return bT-aT; /* козирі першими (вони сильніші) */
+          });
+        }else{
+          hand.sort((a,b)=>{
+            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+            const aW=mode==='wild'&&a.r===G.wildRank?0:1, bW=mode==='wild'&&b.r===G.wildRank?0:1;
+            if(aT!==bT)return aT-bT;
+            if(aW!==bW)return aW-bW;
+            return a.r-b.r;
+          });
+        }
         if(hand.length){
           applyIntent(botSeat,{t:'attack',card:hand[0]});sync();botThink();
         }
@@ -527,14 +547,25 @@ function botAct(){
       const rk=tableRanks();
       const playable=G.hands[botSeat].filter(c=>rk.has(c.r));
       if(playable.length && G.table.length<G.limit && G.hands[playerSeat].length>G.table.length){
-        playable.sort((a,b)=>{
-          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
-          if(aT!==bT)return aT-bT;
-          return a.r-b.r;
-        });
-        const c=playable[0];
-        if(c.s!==G.trumpSuit || c.r<=10){
+        if(isNeg){
+          /* У негативі підкидаємо найстарші карти */
+          playable.sort((a,b)=>{
+            if(a.r!==b.r)return b.r-a.r;
+            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+            return bT-aT;
+          });
+          const c=playable[0];
           applyIntent(botSeat,{t:'attack',card:c});sync();botThink();return;
+        }else{
+          playable.sort((a,b)=>{
+            const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+            if(aT!==bT)return aT-bT;
+            return a.r-b.r;
+          });
+          const c=playable[0];
+          if(c.s!==G.trumpSuit || c.r<=10){
+            applyIntent(botSeat,{t:'attack',card:c});sync();botThink();return;
+          }
         }
       }
       applyIntent(botSeat,{t:'done'});sync();botThink();return;
@@ -553,19 +584,37 @@ function botAct(){
       const idx=undefended[0];
       const atkCard=G.table[idx].a;
       const candidates=G.hands[botSeat].filter(c=>beats(c,atkCard,G.trumpSuit,G.wildRank));
-      if(candidates.length===0){
-        applyIntent(botSeat,{t:'take'});sync();botThink();return;
+      
+      if(isNeg){
+        /* У негативі: якщо атака дрібна (≤10) — беремо, бо це вигідно (додає карти).
+           Відбиваємося тільки якщо атака сильна (туз/король/дама) */
+        if(atkCard.r<=10 || candidates.length===0){
+          applyIntent(botSeat,{t:'take'});sync();botThink();return;
+        }
+        /* Атака сильна — відбиваємося, але найдешевшим козирем або старшою картою */
+        candidates.sort((a,b)=>{
+          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+          if(aT!==bT)return aT-bT; /* козирі першими */
+          return a.r-b.r; /* потім за зростанням */
+        });
+        const chosen=candidates[0];
+        applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
+      }else{
+        /* Класична логіка */
+        if(candidates.length===0){
+          applyIntent(botSeat,{t:'take'});sync();botThink();return;
+        }
+        candidates.sort((a,b)=>{
+          const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
+          if(aT!==bT)return aT-bT;
+          return a.r-b.r;
+        });
+        const chosen=candidates[0];
+        if(chosen.s===G.trumpSuit && atkCard.s!==G.trumpSuit && chosen.r>=12 && G.hands[botSeat].length>=3){
+          applyIntent(botSeat,{t:'take'});sync();botThink();return;
+        }
+        applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
       }
-      candidates.sort((a,b)=>{
-        const aT=a.s===G.trumpSuit?1:0, bT=b.s===G.trumpSuit?1:0;
-        if(aT!==bT)return aT-bT;
-        return a.r-b.r;
-      });
-      const chosen=candidates[0];
-      if(chosen.s===G.trumpSuit && atkCard.s!==G.trumpSuit && chosen.r>=12 && G.hands[botSeat].length>=3){
-        applyIntent(botSeat,{t:'take'});sync();botThink();return;
-      }
-      applyIntent(botSeat,{t:'defend',idx:idx,card:chosen});sync();botThink();return;
     }
   }
 }
@@ -829,11 +878,7 @@ function applyIntent(seat,m){
 function makeView(seat){
   const opp=seat==='host'?'guest':'host';let result=null;
   if(G.phase==='over'){
-    if(mode==='negative'){
-      result=G.winner==='draw'?'draw':(G.winner===seat?'lose':'win');
-    }else{
-      result=G.winner==='draw'?'draw':(G.winner===seat?'win':'lose');
-    }
+    result=G.winner==='draw'?'draw':(G.winner===seat?'win':'lose');
   }
   const view={myHand:[...G.hands[seat]].sort((a,b)=>(SUITS.indexOf(a.s)-SUITS.indexOf(b.s))||(a.r-b.r)),
     oppCount:G.hands[opp].length,table:G.table,deckCount:G.deck.length,trumpCard:G.trumpCard,
