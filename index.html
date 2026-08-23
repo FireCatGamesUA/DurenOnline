@@ -125,24 +125,30 @@ input::placeholder{color:#6a8a70;letter-spacing:1px}
 .accInfo{display:flex;flex-direction:column;gap:4px;text-align:left}
 .accTitle{font-size:11px;letter-spacing:3px;color:#a8c4ae}
 .accChipsRow{font-size:16px;color:var(--warn)}
-#accOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9;padding:20px}
+#accOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9;padding:0}
 .accPanel{
-  max-width:430px;width:100%;text-align:center;
+  width:100%;height:100%;max-width:none;text-align:center;
   background:
     linear-gradient(rgba(5,12,8,.6),rgba(5,12,8,.6)),
     url('images/backgrounds/card_mat_high_stakes.png') center/cover no-repeat;
   image-rendering:pixelated;image-rendering:crisp-edges;
+  box-shadow:none;
+  padding:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.accInner{
+  max-width:460px;width:90%;padding:40px 20px;
+  background:rgba(5,12,8,.55);
   box-shadow:
     inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
     inset calc(var(--px)*2) calc(var(--px)*2) 0 0 #3a5a42,
     0 0 0 calc(var(--px)*2) var(--btn-ink);
-  padding:30px 26px;
 }
-.accPanel h2{font-size:24px;letter-spacing:2px;margin-bottom:16px;color:var(--accent);text-shadow:2px 2px 0 #000}
-.accBalance{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px}
-.accBalance img{width:44px;height:44px;image-rendering:pixelated;image-rendering:crisp-edges}
-.accBalance span{font-size:34px;color:var(--warn);text-shadow:2px 2px 0 #000}
-.accStats{margin-bottom:18px;color:#d9efdd;font-size:13px;text-shadow:1px 1px 0 #000}
+.accPanel h2{font-size:28px;letter-spacing:2px;margin-bottom:20px;color:var(--accent);text-shadow:2px 2px 0 #000}
+.accBalance{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px}
+.accBalance img{width:52px;height:52px;image-rendering:pixelated;image-rendering:crisp-edges}
+.accBalance span{font-size:42px;color:var(--warn);text-shadow:2px 2px 0 #000}
+.accStats{margin-bottom:22px;color:#d9efdd;font-size:14px;text-shadow:1px 1px 0 #000;letter-spacing:1px}
 
 h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 .mats{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
@@ -415,10 +421,12 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 
 <div id="accOverlay" hidden>
   <div class="accPanel">
-    <h2>АКАУНТ ГРАВЦЯ</h2>
-    <div class="accBalance"><img src="images/chip_mini.png" alt=""><span id="accChipsBig">0</span></div>
-    <div class="accStats" id="accStats"></div>
-    <button id="accClose">ЗАКРИТИ</button>
+    <div class="accInner">
+      <h2>АКАУНТ ГРАВЦЯ</h2>
+      <div class="accBalance"><img src="images/chip_mini.png" alt=""><span id="accChipsBig">0</span></div>
+      <div class="accStats" id="accStats"></div>
+      <button id="accClose">ЗАКРИТИ</button>
+    </div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1130,22 +1138,79 @@ function showOverlay(title,text,btns){
 function hideOverlay(){$('overlay').hidden=true;}
 let toastT=null;
 function toast(m){const t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity=0,2200);}
-/* -------- АКАУНТ ГРАВЦЯ -------- */
+/* -------- АКАУНТ ГРАВЦЯ + IndexedDB (стійка БД) -------- */
 let chips=parseInt(localStorage.getItem('durakChips'))||500;
 let wins=parseInt(localStorage.getItem('durakWins'))||0;
 let loses=parseInt(localStorage.getItem('durakLoses'))||0;
 let rewardGiven=false;
+let db=null;
+const DB_NAME='durakDB', DB_VER=1, STORE='profile';
+
+function dbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:'id'});
+    };
+    r.onsuccess=e=>{db=e.target.result;res(db);};
+    r.onerror=()=>rej(r.error);
+  });
+}
+function dbGet(id){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(STORE,'readonly');
+    const r=tx.objectStore(STORE).get(id);
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error);
+  });
+}
+function dbSet(rec){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(rec);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function initAccount(){
+  try{
+    await dbOpen();
+    let rec=await dbGet('me');
+    if(!rec){
+      rec={id:'me',chips:500,wins:0,loses:0};
+      await dbSet(rec);
+    }
+    chips=rec.chips;wins=rec.wins;loses=rec.loses;
+    /* Кешуємо в localStorage для синхронного читання */
+    localStorage.setItem('durakChips',chips);
+    localStorage.setItem('durakWins',wins);
+    localStorage.setItem('durakLoses',loses);
+  }catch(e){
+    console.warn('IndexedDB недоступна, fallback на localStorage',e);
+    chips=parseInt(localStorage.getItem('durakChips'))||500;
+    wins=parseInt(localStorage.getItem('durakWins'))||0;
+    loses=parseInt(localStorage.getItem('durakLoses'))||0;
+  }
+  renderAccount();
+}
 function renderAccount(){
   $('accChips').textContent=chips;
   $('accChipsBig').textContent=chips;
   $('accStats').textContent='ПЕРЕМОГ: '+wins+' • ПРОГРАШІВ: '+loses;
 }
-function saveAccount(){
+async function saveAccount(){
+  /* Пишемо і в localStorage (кеш), і в IndexedDB (стійка БД) */
   localStorage.setItem('durakChips',chips);
   localStorage.setItem('durakWins',wins);
   localStorage.setItem('durakLoses',loses);
+  if(db){
+    try{await dbSet({id:'me',chips,wins,loses});}
+    catch(e){console.warn('Помилка запису в IndexedDB',e);}
+  }
   renderAccount();
 }
+initAccount();
 /* +100 фішок за перемогу, −100 за поразку; один раз за гру */
 function applyReward(){
   if(rewardGiven||!V||V.phase!=='over'||V.result==='draw')return;
