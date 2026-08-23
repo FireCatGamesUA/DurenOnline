@@ -107,6 +107,42 @@ input::placeholder{color:#6a8a70;letter-spacing:1px}
 .modeBtn.active{color:var(--accent);border-bottom-color:var(--accent)}
 #modeList{display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;grid-template-rows:repeat(5,auto);gap:2px 6px}
 #modeList .modeBtn{width:100%;padding:10px 8px;font-size:12px}
+.sideCol{display:flex;flex-direction:column;gap:24px;width:330px;min-width:0}
+.account{
+  display:flex;align-items:center;gap:12px;width:100%;
+  background:rgba(14,24,17,.92);border:none;
+  box-shadow:
+    inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
+    inset calc(var(--px)*2) calc(var(--px)*2) 0 0 #3a5a42,
+    0 0 0 calc(var(--px)*2) var(--btn-ink);
+  padding:14px;cursor:pointer;
+  font-family:'Tiny5',monospace;color:var(--ink);
+  text-transform:uppercase;letter-spacing:1px;
+  transition:filter .12s;min-height:auto;
+}
+.account:hover{filter:brightness(1.15)}
+.account img{width:34px;height:34px;image-rendering:pixelated;image-rendering:crisp-edges}
+.accInfo{display:flex;flex-direction:column;gap:4px;text-align:left}
+.accTitle{font-size:11px;letter-spacing:3px;color:#a8c4ae}
+.accChipsRow{font-size:16px;color:var(--warn)}
+#accOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9;padding:20px}
+.accPanel{
+  max-width:430px;width:100%;text-align:center;
+  background:
+    linear-gradient(rgba(5,12,8,.6),rgba(5,12,8,.6)),
+    url('images/backgrounds/card_mat_high_stakes.png') center/cover no-repeat;
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  box-shadow:
+    inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
+    inset calc(var(--px)*2) calc(var(--px)*2) 0 0 #3a5a42,
+    0 0 0 calc(var(--px)*2) var(--btn-ink);
+  padding:30px 26px;
+}
+.accPanel h2{font-size:24px;letter-spacing:2px;margin-bottom:16px;color:var(--accent);text-shadow:2px 2px 0 #000}
+.accBalance{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px}
+.accBalance img{width:44px;height:44px;image-rendering:pixelated;image-rendering:crisp-edges}
+.accBalance span{font-size:34px;color:var(--warn);text-shadow:2px 2px 0 #000}
+.accStats{margin-bottom:18px;color:#d9efdd;font-size:13px;text-shadow:1px 1px 0 #000}
 
 h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 .mats{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
@@ -257,6 +293,7 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
   #lobby{padding:14px}
   .lobbyWrap{flex-direction:column;align-items:stretch}
   .modes{max-width:100%;min-width:0;width:100%}
+    .sideCol{width:100%}
   .modes h3{text-align:center}
   .panel{padding:22px 20px}
   h1{font-size:24px;margin-bottom:16px}
@@ -336,9 +373,18 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
         </div>
       </div>
     </div>
-    <div class="modes">
-      <h3>РЕЖИМ</h3>
-      <div id="modeList"></div>
+    <div class="sideCol">
+      <div class="modes">
+        <h3>РЕЖИМ</h3>
+        <div id="modeList"></div>
+      </div>
+      <button class="account" id="accountBtn" type="button">
+        <img src="images/chip_mini.png" alt="">
+        <span class="accInfo">
+          <span class="accTitle">АКАУНТ ГРАВЦЯ</span>
+          <span class="accChipsRow"><span id="accChips">0</span> ФІШОК</span>
+        </span>
+      </button>
     </div>
   </div>
 </div>
@@ -366,16 +412,25 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 </div>
 
 <div id="overlay" hidden><div class="ovPanel"><h2 id="ovTitle"></h2><p id="ovText"></p><div class="row" id="ovBtns"></div></div></div>
+
+<div id="accOverlay" hidden>
+  <div class="accPanel">
+    <h2>АКАУНТ ГРАВЦЯ</h2>
+    <div class="accBalance"><img src="images/chip_mini.png" alt=""><span id="accChipsBig">0</span></div>
+    <div class="accStats" id="accStats"></div>
+    <button id="accClose">ЗАКРИТИ</button>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
-const IMG='';
-const BACK='back.png';
+const IMG='images/';
+const BACK='images/backs/back.png';
 const BACK_HTML='<img src="'+BACK+'" alt="" onload="this.parentNode.classList.add(\'hasimg\')" onerror="this.remove()">';
 const SUITS=['c','d','h','s'];
 const RANKS=[6,7,8,9,10,11,12,13,14];
-const MATS=[['foyer','card_mat_foyer.png','Фоє'],['basement','card_mat_basement.png','Підвал'],
-            ['office','card_mat_landlords_office.png','Кабінет'],['lounge','card_mat_lounge.png','Лаундж']];
+const MATS=[['foyer','images/backgrounds/card_mat_foyer.png','Фоє'],['basement','images/backgrounds/card_mat_basement.png','Підвал'],
+            ['office','images/backgrounds/card_mat_landlords_office.png','Кабінет'],['lounge','images/backgrounds/card_mat_lounge.png','Лаундж']];
 const MODES=[
   ['classic','КЛАСИЧНИЙ'],
   ['balance','БАЛАНС'],
@@ -640,7 +695,7 @@ function botAct(){
   }
 }
 function startBotGame(){
-  isBotGame=true;isHost=true;
+  isBotGame=true;isHost=true;rewardGiven=false;
   G=newGame('auto');
   showGame();layoutMat();
   sync();botThink();
@@ -686,6 +741,7 @@ if(d.t==='mode'&&!isHost){
   if(d.t==='intent'&&isHost){applyIntent('guest',d.m);sync();}
   if(d.t==='view'&&!isHost){
   V=d.v;
+  if(V.phase!=='over')rewardGiven=false;
   if(V.mode){
     mode=V.mode;
     localStorage.setItem('durakMode',mode);
@@ -700,7 +756,7 @@ $('copyBtn').onclick=()=>{
   if(navigator.clipboard){navigator.clipboard.writeText(roomCode);toast('Код скопійовано');}
   else toast(roomCode);
 };
-$('startBtn').onclick=()=>{isHost=true;G=newGame('auto');showGame();layoutMat();sync();};
+$('startBtn').onclick=()=>{isHost=true;rewardGiven=false;G=newGame('auto');showGame();layoutMat();sync();};
 
 let G=null;
 const defSeat=()=>G.attacker==='host'?'guest':'host';
@@ -972,6 +1028,7 @@ function statusLine(){
 }
 function render(){
   if(!V)return;
+  applyReward();
   $('statusText').textContent=statusLine();
   const oz=$('oppZone');oz.innerHTML='';
   if(V.oppHand && V.oppHand.length){
@@ -1073,6 +1130,34 @@ function showOverlay(title,text,btns){
 function hideOverlay(){$('overlay').hidden=true;}
 let toastT=null;
 function toast(m){const t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity=0,2200);}
+/* -------- АКАУНТ ГРАВЦЯ -------- */
+let chips=parseInt(localStorage.getItem('durakChips'))||1000;
+let wins=parseInt(localStorage.getItem('durakWins'))||0;
+let loses=parseInt(localStorage.getItem('durakLoses'))||0;
+let rewardGiven=false;
+function renderAccount(){
+  $('accChips').textContent=chips;
+  $('accChipsBig').textContent=chips;
+  $('accStats').textContent='ПЕРЕМОГ: '+wins+' • ПРОГРАШІВ: '+loses;
+}
+function saveAccount(){
+  localStorage.setItem('durakChips',chips);
+  localStorage.setItem('durakWins',wins);
+  localStorage.setItem('durakLoses',loses);
+  renderAccount();
+}
+/* +100 фішок за перемогу, −100 за поразку; один раз за гру */
+function applyReward(){
+  if(rewardGiven||!V||V.phase!=='over'||V.result==='draw')return;
+  rewardGiven=true;
+  if(V.result==='win'){chips+=100;wins++;}
+  else{chips=Math.max(0,chips-100);loses++;}
+  saveAccount();
+}
+$('accountBtn').onclick=()=>{renderAccount();$('accOverlay').hidden=false;};
+$('accClose').onclick=()=>$('accOverlay').hidden=true;
+$('accOverlay').onclick=e=>{if(e.target===$('accOverlay'))$('accOverlay').hidden=true;};
+renderAccount();
 $('botBtn').onclick=()=>{
   startBotGame();
 };
