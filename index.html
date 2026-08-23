@@ -125,30 +125,25 @@ input::placeholder{color:#6a8a70;letter-spacing:1px}
 .accInfo{display:flex;flex-direction:column;gap:4px;text-align:left}
 .accTitle{font-size:11px;letter-spacing:3px;color:#a8c4ae}
 .accChipsRow{font-size:16px;color:var(--warn)}
-#accOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:9;padding:0}
+#accOverlay{position:fixed;inset:0;z-index:9}
 .accPanel{
-  width:100%;height:100%;max-width:none;text-align:center;
-  background:
-    linear-gradient(rgba(5,12,8,.6),rgba(5,12,8,.6)),
-    url('images/backgrounds/card_mat_high_stakes.png') center/cover no-repeat;
+  position:absolute;inset:0;
+  background:url('images/backgrounds/card_mat_high_stakes.png') center/cover no-repeat;
   image-rendering:pixelated;image-rendering:crisp-edges;
-  box-shadow:none;
-  padding:0;
-  display:flex;align-items:center;justify-content:center;
 }
 .accInner{
-  max-width:460px;width:90%;padding:40px 20px;
-  background:rgba(5,12,8,.55);
-  box-shadow:
-    inset calc(var(--px)*-2) calc(var(--px)*-2) 0 0 #000,
-    inset calc(var(--px)*2) calc(var(--px)*2) 0 0 #3a5a42,
-    0 0 0 calc(var(--px)*2) var(--btn-ink);
+  position:absolute;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+  background:rgba(6,12,8,.35);
+  overflow:hidden;
 }
-.accPanel h2{font-size:28px;letter-spacing:2px;margin-bottom:20px;color:var(--accent);text-shadow:2px 2px 0 #000}
-.accBalance{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px}
-.accBalance img{width:52px;height:52px;image-rendering:pixelated;image-rendering:crisp-edges}
-.accBalance span{font-size:42px;color:var(--warn);text-shadow:2px 2px 0 #000}
-.accStats{margin-bottom:22px;color:#d9efdd;font-size:14px;text-shadow:1px 1px 0 #000;letter-spacing:1px}
+.accPanel h2{font-size:clamp(14px,calc(var(--as,4)*7px),34px);letter-spacing:2px;margin-bottom:calc(var(--as,4)*3px);color:var(--accent);text-shadow:2px 2px 0 #000}
+.accBalance{display:flex;align-items:center;justify-content:center;gap:calc(var(--as,4)*3px);margin-bottom:calc(var(--as,4)*3px)}
+.accBalance img{width:clamp(28px,calc(var(--as,4)*13px),64px);height:clamp(28px,calc(var(--as,4)*13px),64px);image-rendering:pixelated;image-rendering:crisp-edges}
+.accBalance span{font-size:clamp(18px,calc(var(--as,4)*10px),48px);color:var(--warn);text-shadow:2px 2px 0 #000}
+.accStats{margin-bottom:calc(var(--as,4)*4px);color:#d9efdd;font-size:clamp(10px,calc(var(--as,4)*3.5px),16px);text-shadow:1px 1px 0 #000;letter-spacing:1px}
+.accInner button{font-size:clamp(10px,calc(var(--as,4)*3.5px),16px);min-height:calc(var(--as,4)*9px);padding:calc(var(--as,4)*2px) calc(var(--as,4)*4px)}
 
 h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 .mats{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap}
@@ -1219,9 +1214,30 @@ function applyReward(){
   else{chips=Math.max(0,chips-100);loses++;}
   saveAccount();
 }
-$('accountBtn').onclick=()=>{renderAccount();$('accOverlay').hidden=false;};
+/* -------- позиціювання акаунта на екрані монітора фону -------- */
+/* прямокутник екрана монітора у % від зображення фону (640x360) */
+const ACC_SCREEN={x:11,y:13,w:50,h:66};
+function layoutAcc(){
+  const inner=document.querySelector('.accInner');
+  if(!inner)return;
+  const MW=640,MH=360;
+  const vw=innerWidth,vh=innerHeight;
+  const s=Math.max(vw/MW,vh/MH);           /* cover-масштаб, як у layoutMat */
+  const ox=(vw-MW*s)/2, oy=(vh-MH*s)/2;
+  inner.style.left=(ox+ACC_SCREEN.x/100*MW*s)+'px';
+  inner.style.top =(oy+ACC_SCREEN.y/100*MH*s)+'px';
+  inner.style.width =(ACC_SCREEN.w/100*MW*s)+'px';
+  inner.style.height=(ACC_SCREEN.h/100*MH*s)+'px';
+  inner.style.setProperty('--as',s);        /* масштаб шрифтів/іконок */
+}
+addEventListener('resize',layoutAcc);
+layoutAcc();
+
+$('accountBtn').onclick=()=>{renderAccount();$('accOverlay').hidden=false;layoutAcc();};
 $('accClose').onclick=()=>$('accOverlay').hidden=true;
-$('accOverlay').onclick=e=>{if(e.target===$('accOverlay'))$('accOverlay').hidden=true;};
+$('accOverlay').onclick=e=>{
+  if(e.target===$('accOverlay')||e.target.classList.contains('accPanel'))$('accOverlay').hidden=true;
+};
 renderAccount();
 $('botBtn').onclick=()=>{
   startBotGame();
