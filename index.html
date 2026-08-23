@@ -1134,7 +1134,7 @@ function hideOverlay(){$('overlay').hidden=true;}
 let toastT=null;
 function toast(m){const t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity=0,2200);}
 /* -------- АКАУНТ ГРАВЦЯ + IndexedDB (стійка БД) -------- */
-let chips=parseInt(localStorage.getItem('durakChips'))||500;
+let chips=parseInt(localStorage.getItem('durakChips'))||100;
 let wins=parseInt(localStorage.getItem('durakWins'))||0;
 let loses=parseInt(localStorage.getItem('durakLoses'))||0;
 let rewardGiven=false;
@@ -1173,7 +1173,7 @@ async function initAccount(){
     await dbOpen();
     let rec=await dbGet('me');
     if(!rec){
-      rec={id:'me',chips:500,wins:0,loses:0};
+      rec={id:'me',chips:100,wins:0,loses:0};
       await dbSet(rec);
     }
     chips=rec.chips;wins=rec.wins;loses=rec.loses;
@@ -1183,7 +1183,7 @@ async function initAccount(){
     localStorage.setItem('durakLoses',loses);
   }catch(e){
     console.warn('IndexedDB недоступна, fallback на localStorage',e);
-    chips=parseInt(localStorage.getItem('durakChips'))||500;
+    chips=parseInt(localStorage.getItem('durakChips'))||100;
     wins=parseInt(localStorage.getItem('durakWins'))||0;
     loses=parseInt(localStorage.getItem('durakLoses'))||0;
   }
@@ -1206,17 +1206,17 @@ async function saveAccount(){
   renderAccount();
 }
 initAccount();
-/* +100 фішок за перемогу, −100 за поразку; один раз за гру */
+/* +10 фішок за перемогу, −10 за поразку; один раз за гру */
 function applyReward(){
   if(rewardGiven||!V||V.phase!=='over'||V.result==='draw')return;
   rewardGiven=true;
-  if(V.result==='win'){chips+=100;wins++;}
-  else{chips=Math.max(0,chips-100);loses++;}
+  if(V.result==='win'){chips+=10;wins++;}
+  else{chips=Math.max(0,chips-10);loses++;}
   saveAccount();
 }
 /* -------- позиціювання акаунта на екрані монітора фону -------- */
 /* прямокутник екрана монітора у % від зображення фону (640x360) */
-const ACC_SCREEN={x:11,y:13,w:50,h:66};
+const ACC_SCREEN={x:12,y:13,w:50,h:66};
 function layoutAcc(){
   const inner=document.querySelector('.accInner');
   if(!inner)return;
