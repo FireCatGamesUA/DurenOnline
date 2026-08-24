@@ -71,8 +71,21 @@ input{
     inset var(--px) var(--px) 0 0 #000,
     inset calc(var(--px)*-1) calc(var(--px)*-1) 0 0 #4a6a50,
     0 0 0 var(--px) var(--btn-ink);
+  caret-color:transparent;          /* прихований курсор */
 }
+input:focus{
+  outline:none;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 #000,
+    inset calc(var(--px)*-1) calc(var(--px)*-1) 0 0 #4a6a50,
+    0 0 0 calc(var(--px)/2) var(--accent);
+}
+input::selection{background:transparent;color:var(--ink)}  /* невидиме виділення тексту */
+input::-moz-selection{background:transparent;color:var(--ink)}  /* Firefox */
 input::placeholder{color:#6a8a70;letter-spacing:1px}
+#stakeInput{caret-color:transparent}
+#stakeInput:focus{outline:none}
+.stakeWrap{display:inline-block;margin-top:6px}
 
 #lobby{display:flex;align-items:center;justify-content:center;padding:20px}
 .lobbyWrap{display:flex;gap:24px;max-width:1000px;width:100%;align-items:flex-start;flex-wrap:wrap;justify-content:center}
@@ -183,7 +196,9 @@ button.accTexBtn:active{transform:none;box-shadow:none;filter:brightness(1.2)}
   letter-spacing:2px;text-shadow:2px 2px 0 #000;
   margin-bottom:calc(var(--as,4)*2px);
 }
-.accShopList{overflow-y:auto;display:flex;flex-direction:column;gap:calc(var(--as,4)*2px)}
+.accShopList{overflow-y:auto;display:flex;flex-direction:column;gap:calc(var(--as,4)*2px);
+  scrollbar-width:none;-ms-overflow-style:none}
+.accShopList::-webkit-scrollbar{display:none;width:0;height:0}
 .accShopItem{
   display:flex;align-items:center;gap:calc(var(--as,4)*2px);
   background:rgba(0,0,0,.35);
@@ -192,11 +207,8 @@ button.accTexBtn:active{transform:none;box-shadow:none;filter:brightness(1.2)}
 }
 .accShopItem:hover{background:rgba(0,0,0,.55)}
 .accShopItem .thumb{
-  width:auto;height:auto;
-  max-height:calc(var(--as,4)*12px);max-width:40%;
-  background:transparent;
-  box-shadow:none;
-  image-rendering:pixelated;image-rendering:crisp-edges;
+  display:block;background:transparent;background-repeat:no-repeat;
+  box-shadow:none;image-rendering:pixelated;image-rendering:crisp-edges;
   flex:0 0 auto;
 }
 .accShopItem .nm{
@@ -251,7 +263,8 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
 .oppBack.hasimg,.card.back.hasimg{background:none;box-shadow:none}
 .slotZone{position:absolute;z-index:1;display:flex;flex-direction:column;align-items:center;gap:6px}
 .slotZone img{width:100%;display:block}
-.slotZone .card.back{width:100%;height:auto;aspect-ratio:66/100}
+.slotZone .card.back{width:100%;height:auto;aspect-ratio:66/100;overflow:hidden}
+.slotZone .card.back>img{width:100%;height:100%;object-fit:contain}
 .card{width:var(--cw);position:relative}
 .card img{width:100%;display:block}
 .card.back{
@@ -439,11 +452,14 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
           <h2>СТВОРИТИ КІМНАТУ</h2>
           <button id="createBtn">СТВОРИТИ</button>
           <div id="hostBox" hidden>
-            <div class="small">Код запрошення:</div>
+            <div class="small" style="margin-top:10px">Код запрошення:</div>
             <div class="codeBig"><span id="myCode"></span> <button id="copyBtn" class="mini">СКОПІЮВАТИ</button></div>
-            <div class="small">Надішліть код другу.</div>
+            <div class="small">Ставка (фішок):</div>
+            <div class="stakeWrap">
+              <input id="stakeInput" type="text" inputmode="numeric" value="10" style="width:100px;letter-spacing:1px">
+            </div>
             <div id="hostStatus">Очікування суперника…</div>
-            <button id="startBtn" hidden>ПОЧАТИ ГРУ</button>
+            <button id="startBtn" hidden disabled>ПОЧАТИ ГРУ</button>
             <button id="botBtn" style="margin-top:10px;width:100%">ГРАТИ З БОТОМ</button>
           </div>
         </div>
@@ -451,6 +467,7 @@ h1{font-size:32px;letter-spacing:2px;margin-bottom:22px;color:var(--accent)}
           <h2>ПРИЄДНАТИСЯ ЗА КОДОМ</h2>
           <input id="joinCode" maxlength="5" placeholder="КОД">
           <button id="joinBtn" style="margin-top:10px;width:100%">ПРИЄДНАТИСЯ</button>
+          <button id="acceptStakeBtn" hidden style="margin-top:10px;width:100%">ПРИЙНЯТИ</button>
           <div id="joinStatus"></div>
         </div>
       </div>
@@ -550,19 +567,50 @@ const MATS=[['foyer','images/backgrounds/card_mat_foyer.png','Фоє'],['basemen
             ['landlords_office','images/backgrounds/card_mat_landlords_office.png','Кабінет'],['lounge','images/backgrounds/card_mat_lounge.png','Лаундж']];
 const BACKS=[
   {id:'back',name:'CLASSIC',img:'images/backs/back.png',price:0},
-
+  {id:'back1',name:'CLASSIC RED',img:'images/backs/back1.png',price:0},
+  {id:'back2',name:'CLASSIC BLACK',img:'images/backs/back2.png',price:0},
+  {id:'back3',name:'CLASSIC PURPLE',img:'images/backs/back3.png',price:0},
+  {id:'back4',name:'CLASSIC GREEN',img:'images/backs/back4.png',price:0},
+  {id:'castle',name:'NIGHTMARE CASTLE',img:'images/backs/card_back_5_castle.png',price:100},
+  {id:'fish',name:'FISHING',img:'images/backs/card_back_6_fish.png',price:200},
+  {id:'ornament',name:'ORNAMENT',img:'images/backs/card_back_7.png',price:300},
+  {id:'wheel',name:'WHEEL',img:'images/backs/card_back_8.png',price:400},
+  {id:'galaxy',name:'GALAXY',img:'images/backs/card_back_9.png',price:500},
+  {id:'vintage',name:'VINTAGE',img:'images/backs/card_back_10_vintage.png',price:750},
+  {id:'star',name:'STAR',img:'images/backs/card_back_11_star.png',price:1000},
+  {id:'landscapes',name:'LANDSCAPES',img:'images/backs/card_back_12_landscapes.png',price:1500},
+  {id:'geometry1',name:'GEOMETRY RED',img:'images/backs/card_back_13_geometry.png',price:2000},
+  {id:'geometry2',name:'GEOMETRY GREEN',img:'images/backs/card_back_14_geometry.png',price:2000},
+  {id:'geometry3',name:'GEOMETRY ORANGE',img:'images/backs/card_back_15_geometry.png',price:2000},
+  {id:'space',name:'SPACE',img:'images/backs/card_back_16_space.png',price:2500},
+  {id:'royale1',name:'ROYALE GOLD',img:'images/backs/card_back_17_royale.png',price:3000},
+  {id:'purple',name:'PURPLE',img:'images/backs/card_back_18.png',price:3500},
+  {id:'rainbow',name:'RAINBOW',img:'images/backs/card_back_19_rainbow.png',price:5000},
+  {id:'royale',name:'ROYALE',img:'images/backs/card_back_20.png',price:7500},
+  {id:'balance',name:'BALANCE',img:'images/backs/card_back_21_balance.png',price:8000},
+  {id:'island',name:'ISLAND',img:'images/backs/card_back_22_pirate.png',price:8500},
+  {id:'suits',name:'SUITS',img:'images/backs/card_back_23_suits.png',price:9000},
+  {id:'royale2',name:'ROYALE GRAND',img:'images/backs/card_back_24_royale.png',price:10000},
+  {id:'royale3',name:'ROYALE RED',img:'images/backs/card_back_25_royale.png',price:10000}
 ];
 const SPECIAL_MATS=[
-  {id:'vip_area',name:'VIP AREA',img:'images/backgrounds/card_mat_vip_area.png',price:1000},
-  {id:'underground_casino',name:'UNDERGROUND CASINO',img:'images/backgrounds/card_mat_underground_casino.png',price:1500},
-  {id:'office',name:'HEAD OFFICE',img:'images/backgrounds/card_mat_head_office.png',price:2500},
-  {id:'laboratory',name:'LABORATORY',img:'images/backgrounds/card_mat_laboratory.png',price:3000},
-  {id:'dungeon',name:'DUNGEON',img:'images/backgrounds/card_mat_dungeon.png',price:3500},
-  {id:'upward',name:'UPWARD',img:'images/backgrounds/card_mat_upward.png',price:4500},
-  {id:'downward',name:'DOWNWARD',img:'images/backgrounds/card_mat_downward.png',price:5000},
-  {id:'surveillance',name:'SURVEILLANCE',img:'images/backgrounds/card_mat_surveillance.png',price:6000},
-  {id:'apathy',name:'APATHY',img:'images/backgrounds/card_mat_apathy.png',price:7500},
-  {id:'anxiety',name:'ANXIETY',img:'images/backgrounds/card_mat_anxiety.png',price:10000}
+  {id:'vip_area',name:'VIP AREA',img:'images/backgrounds/card_mat_vip_area.png',price:1000,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'underground_casino',name:'UNDERGROUND CASINO',img:'images/backgrounds/card_mat_underground_casino.png',price:1500,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'office',name:'HEAD OFFICE',img:'images/backgrounds/card_mat_head_office.png',price:2500,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'laboratory',name:'LABORATORY',img:'images/backgrounds/card_mat_laboratory.png',price:3000,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'dungeon',name:'DUNGEON',img:'images/backgrounds/card_mat_dungeon.png',price:3500,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'upward',name:'UPWARD',img:'images/backgrounds/card_mat_upward.png',price:4500,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'downward',name:'DOWNWARD',img:'images/backgrounds/card_mat_downward.png',price:5000,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'surveillance',name:'SURVEILLANCE',img:'images/backgrounds/card_mat_surveillance.png',price:6000,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'apathy',name:'APATHY',img:'images/backgrounds/card_mat_apathy.png',price:7500,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'anxiety',name:'ANXIETY',img:'images/backgrounds/card_mat_anxiety.png',price:10000,anim:{cols:1,rows:1,frames:1,delay:0}},
+  {id:'surveill',name:'SURVEILL',img:'images/backgrounds/monitor1.png',price:20000,anim:{cols:4,rows:8,frames:32,delay:175}},
+  {id:'guest',name:'GUEST',img:'images/backgrounds/monitor3.png',price:25000,anim:{cols:8,rows:14,frames:112,delay:300}},
+  {id:'glitch',name:'GLITCH',img:'images/backgrounds/monitor2_glitch.png',price:30000,anim:{cols:4,rows:12,frames:48,delay:250}},
+  {id:'MONITOR',name:'MONITOR',img:'images/backgrounds/monitor2_loop.png',price:35000,anim:{cols:6,rows:1,frames:6,delay:150}},
+  // {id:'scene',name:'SCENE',img:'images/backgrounds/scene.png',price:40000,anim:{cols:7,rows:7,frames:49,delay:300}},
+  {id:'message',name:'MESSAGE',img:'images/backgrounds/monitor4.png',price:45000,anim:{cols:4,rows:9,frames:34,delay:200}},
+  // {id:'room',name:'ROOM',img:'images/backgrounds/room.png',price:50000,anim:{cols:6,rows:3,frames:17,delay:500}}
 ];
 function findMat(k){return MATS.find(x=>x[0]===k)||SPECIAL_MATS.find(x=>x.id===k)||MATS[0];}
 const MODES=[
@@ -577,7 +625,7 @@ const MODES=[
   ['unstable','НЕСТАБІЛЬНИЙ'],
   ['wild','ДИКІСТЬ']
 ];
-const SLOTS={L:{x:27.5,y:10,w:9},R:{x:63.6,y:10,w:9.2}};
+const SLOTS={L:{x:27.5,y:10,w:9},R:{x:63.47,y:10,w:9.2}};
 const cardImg=c=>mode==='nosuit'?IMG+c.r+'n.png':IMG+c.r+c.s+'.png';
 const $=id=>document.getElementById(id);
 $('deckBack').innerHTML=BACK_HTML+$('deckBack').innerHTML;
@@ -645,10 +693,51 @@ addEventListener('resize',layoutMat);
 if(mqMobile.addEventListener)mqMobile.addEventListener('change',layoutMat);
 new ResizeObserver(layoutMat).observe(document.body);
 
+/* -------- АНІМАЦІЯ ФОНІВ: ручна нарізка спрайт-аркушів --------
+   anim:{cols,rows,delay} — кадрів по X / Y та затримка між кадрами (мс).
+   Якщо anim немає — фон статичний (cover/center). */
+let bgTimer=null,bgFrame=0,bgCur=null,bgToken=0;
+function stopBgAnim(){if(bgTimer){clearInterval(bgTimer);bgTimer=null;}}
+function getAnim(m){return Array.isArray(m)?(m[3]||null):(m.anim||null);}
+function matUrl(m){return Array.isArray(m)?m[1]:(m.img||m[1]);}
+function matId(m){return Array.isArray(m)?m[0]:m.id;}
+function bgStep(){
+  if(!bgCur)return;
+  const {img,cols,rows,total}=bgCur;
+  const fw=img.naturalWidth/cols,fh=img.naturalHeight/rows;
+  const scale=Math.max(innerWidth/fw,innerHeight/fh);
+  const f=bgFrame%total;                 /* лише перші `total` кадрів */
+  const cx=f%cols,ry=Math.floor(f/cols)%rows;
+  $('bg').style.backgroundSize=Math.round(img.naturalWidth*scale)+'px '+Math.round(img.naturalHeight*scale)+'px';
+  $('bg').style.backgroundPosition=Math.round(-cx*fw*scale)+'px '+(-ry*fh*scale)+'px';
+  bgFrame++;
+}
+function startBgAnim(m){
+  stopBgAnim();bgFrame=0;bgCur=null;
+  const anim=getAnim(m);
+  const url=matUrl(m);
+  const my=++bgToken;
+  /* статичні особливі фони (1×1 кадр) показуються як cover/center */
+  if(!anim || (anim.cols*anim.rows <= 1 && (!anim.frames || anim.frames <= 1))){
+    $('bg').style.backgroundImage=`url(${url})`;
+    $('bg').style.backgroundSize='cover';
+    $('bg').style.backgroundPosition='center';
+    return;
+  }
+  const img=new Image();
+  img.onload=()=>{
+    if(my!==bgToken)return;
+    $('bg').style.backgroundImage=`url(${url})`;
+    bgCur={img,cols:anim.cols,rows:anim.rows,total:anim.frames||anim.cols*anim.rows};
+    bgStep();
+    bgTimer=setInterval(bgStep,anim.delay||120);
+  };
+  img.src=url;
+}
 function setMat(k){localStorage.setItem('durakMat',k);const m=findMat(k);
-  $('bg').style.backgroundImage=`url(${m[1]||m.img})`;
-  document.querySelectorAll('.matBtn').forEach(b=>b.classList.toggle('active',b.dataset.mat===(m[0]||m.id)));
-  layoutMat();}
+  document.querySelectorAll('.matBtn').forEach(b=>b.classList.toggle('active',b.dataset.mat===matId(m)));
+  layoutMat();
+  startBgAnim(m);}
 MATS.forEach(m=>{const b=document.createElement('button');b.type='button';b.className='matBtn';b.dataset.mat=m[0];
   b.style.backgroundImage=`url(${m[1]})`;b.innerHTML=`<span>${m[2]}</span>`;b.onclick=()=>setMat(m[0]);$('mats').appendChild(b);});
 setMat(localStorage.getItem('durakMat')||'foyer');
@@ -656,6 +745,7 @@ setMat(localStorage.getItem('durakMat')||'foyer');
 let peer=null,conn=null,isHost=false,roomCode='',joined=false,gameShown=false;
 let isBotGame=false;
 let botTimer=null;
+let pvpStake=10;  // ставка для гри з гравцем
 
 function botThink(){
   if(!isBotGame||!G||G.phase==='over')return;
@@ -839,23 +929,41 @@ const genCode=()=>{const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='';for(let i=
 
 $('createBtn').onclick=()=>{
   if(typeof Peer==='undefined'){toast('Немає зʼєднання з сервером PeerJS');return;}
+  let v=parseInt($('stakeInput').value,10);
+  pvpStake=isNaN(v)?10:Math.max(0,v);   /* isNaN, щоб ставка 0 не перетворювалась на 10 */
+  $('stakeInput').value=pvpStake;
   roomCode=genCode();peer=new Peer(peerId(roomCode));
-  peer.on('open',()=>{$('createBtn').disabled=true;$('joinBtn').disabled=true;
-    $('hostBox').hidden=false;$('myCode').textContent=roomCode;});
+peer.on('open',()=>{
+  isHost=true;                          /* хост одразу стає хостом */
+  $('createBtn').hidden=true;          /* кнопка зникає після створення */
+  $('joinBtn').disabled=true;
+  $('hostBox').hidden=false;$('myCode').textContent=roomCode;
+});
   peer.on('connection',c=>{
     if(conn){c.close();return;}
     conn=c;setupConn();
+    /* фіксуємо ставку лише в момент підключення суперника */
+    const v2=parseInt($('stakeInput').value,10);
+    pvpStake=isNaN(v2)?pvpStake:Math.max(0,v2);
+    $('stakeInput').disabled=true;
+    $('botBtn').hidden=true;          /* кнопка "Грати з ботом" зникає */
     joined=true;$('hostStatus').textContent='Суперник у кімнаті!';$('startBtn').hidden=false;
   });
-  peer.on('error',e=>{if(e.type==='unavailable-id'){$('hostStatus').textContent='Код зайнятий — створіть ще раз';$('createBtn').disabled=false;}});
+  peer.on('error',e=>{if(e.type==='unavailable-id'){$('hostStatus').textContent='Код зайнятий — створіть ще раз';$('createBtn').hidden=false;}});
 };
 $('joinBtn').onclick=()=>{
   const code=$('joinCode').value.trim().toUpperCase();if(code.length<4){toast('Введіть код кімнати');return;}
   if(typeof Peer==='undefined'){toast('Немає зʼєднання з сервером PeerJS');return;}
   roomCode=code;peer=new Peer();
-  peer.on('open',()=>{conn=peer.connect(peerId(code),{reliable:true});setupConn();
-    conn.on('open',()=>{$('joinBtn').disabled=true;$('createBtn').disabled=true;
-      $('joinStatus').textContent='Підключено! Очікуйте початку гри…';conn.send({t:'hello'});});});
+  peer.on('open',()=>{
+    conn=peer.connect(peerId(code),{reliable:true});
+    setupConn();
+    conn.on('open',()=>{
+      $('joinBtn').disabled=true;$('createBtn').disabled=true;
+      $('joinStatus').textContent='Підключено! Очікуйте інформацію про ставку…';
+      conn.send({t:'hello'});
+    });
+  });
   peer.on('error',e=>{if(e.type==='peer-unavailable')$('joinStatus').textContent='Кімнату з таким кодом не знайдено';});
 };
 function setupConn(){
@@ -864,14 +972,21 @@ function setupConn(){
 }
 function onData(d){
   if(!d||typeof d!=='object')return;
-  if(d.t==='hello'&&isHost){conn.send({t:'mode',mode});return;}
-if(d.t==='mode'&&!isHost){
-  mode=d.mode;
-  localStorage.setItem('durakMode',mode);
-  renderModes();
-  toast('Режим: '+(MODES.find(m=>m[0]===mode)||[,''])[1]||mode);
+  if(d.t==='hello'&&isHost){conn.send({t:'mode',mode});conn.send({t:'stake',stake:pvpStake});return;}
+  if(d.t==='stakeConfirmed'&&isHost){$('startBtn').disabled=false;$('hostStatus').textContent='Суперник підтвердив ставку!';return;}
+if(d.t==='stake'&&!isHost){
+  pvpStake=d.stake;
+  $('joinStatus').textContent='Ставка: '+pvpStake+' фішок';
+  $('acceptStakeBtn').hidden=false;
   return;
 }
+  if(d.t==='mode'&&!isHost){
+    mode=d.mode;
+    localStorage.setItem('durakMode',mode);
+    renderModes();
+    toast('Режим: '+(MODES.find(m=>m[0]===mode)||[,''])[1]||mode);
+    return;
+  }
   if(d.t==='intent'&&isHost){applyIntent('guest',d.m);sync();}
   if(d.t==='view'&&!isHost){
   V=d.v;
@@ -1310,6 +1425,17 @@ function dbSet(rec){
     tx.onerror=()=>rej(tx.error);
   });
 }
+/* автоматично додає всі безкоштовні предмети (price===0) */
+function addFreeItems(){
+  let changed=false;
+  BACKS.forEach(b=>{
+    if(b.price===0 && !ownedBacks.includes(b.id)){ownedBacks.push(b.id);changed=true;}
+  });
+  SPECIAL_MATS.forEach(m=>{
+    if(m.price===0 && !ownedMats.includes(m.id)){ownedMats.push(m.id);changed=true;}
+  });
+  if(changed)saveAccount();
+}
 async function initAccount(){
   try{
     await dbOpen();
@@ -1341,6 +1467,7 @@ async function initAccount(){
     bankCount=parseInt(localStorage.getItem('durakBankCount'))||0;
     bankFlag=localStorage.getItem('durakBankFlag')==='1';
   }
+  addFreeItems();
   applyCosmetics();
   renderAccount();
   if(chips<=0)showBankrupt();
@@ -1350,7 +1477,7 @@ function applyCosmetics(){
   const b=BACKS.find(x=>x.id===selBack)||BACKS[0];
   BACK=b.img;
   const di=$('deckBack').querySelector('img');if(di)di.src=BACK;
-  if(selMat)setMat(selMat);
+  if(selMat && localStorage.getItem('durakMat')!==selMat)setMat(selMat);
 }
 function renderAccount(){
   $('accChips').textContent=chips;
@@ -1379,7 +1506,7 @@ async function saveAccount(){
 function applyReward(){
   if(rewardGiven||!V||V.phase!=='over'||V.result==='draw')return;
   rewardGiven=true;
-  const reward=isBotGame?10:50;
+  const reward=isBotGame?10:pvpStake;
   if(V.result==='win'){chips+=reward;if(isBotGame)winsBot++;else winsPvp++;}
   else{chips=Math.max(0,chips-reward);if(isBotGame)losesBot++;else losesPvp++;}
   saveAccount();
@@ -1406,15 +1533,49 @@ layoutAcc();
 let shopMode=null;
 const CHECK={off:'images/ui/high_stakes_check.png',dis:'images/ui/high_stakes_check_disabled.png',on:'images/ui/high_stakes_check_selected.png'};
 const RADIO={off:'images/ui/high_stakes_radio.png',dis:'images/ui/high_stakes_radio_disabled.png',on:'images/ui/high_stakes_radio_selected.png'};
-function openShop(key){shopMode=(shopMode===key)?null:key;renderShop();}
+function openShop(key){shopMode=(shopMode===key)?null:key;if(!shopMode)clearShopTimers();renderShop();}
 function updateAccTitle(){
   const t=$('accTitle');if(!t)return;
   t.textContent=shopMode==='backs'?'РУБАШКИ КАРТ':shopMode==='mats'?'ОСОБЛИВІ ФОНИ':'АКАУНТ ГРАВЦЯ';
 }
+let shopTimers=[];
+function clearShopTimers(){shopTimers.forEach(t=>clearInterval(t));shopTimers=[];}
+function initThumb(el,it,isBack){
+  const anim=getAnim(it);
+  const url=matUrl(it);
+  const img=new Image();
+  img.onload=()=>{
+    const cols=anim?anim.cols:1,rows=anim?anim.rows:1;
+    const total=anim?(anim.frames||cols*rows):1;
+    const fw=img.naturalWidth/cols,fh=img.naturalHeight/rows;
+    const as=parseFloat(getComputedStyle(document.querySelector('.accInner')).getPropertyValue('--as'))||4;
+    const base=isBack?8:16;   /* рубашки у два рази менші */
+    const W=Math.round(as*base),H=Math.round(W*fh/fw);
+    el.style.width=W+'px';el.style.height=H+'px';
+    el.style.backgroundImage=`url(${url})`;
+    el.style.backgroundSize=(W*cols)+'px '+(H*rows)+'px';
+    let f=0,acc=0;const delay=anim?anim.delay||120:0;
+    const draw=()=>{const cx=f%cols,ry=Math.floor(f/cols)%rows;el.style.backgroundPosition=(-cx*W)+'px '+(-ry*H)+'px';};
+    draw();
+    if(total>1){const t=setInterval(()=>{acc+=50;if(acc>=delay){acc=0;f=(f+1)%total;draw();}},50);shopTimers.push(t);}
+  };
+  img.src=url;
+}
 function renderShop(){
+  clearShopTimers();
   const box=$('accShop');
-  if(!shopMode){box.hidden=true;updateAccTitle();return;}
+  const stats=document.querySelector('.accStatsCol');
+  const btns=document.querySelector('.accBtnsRow');
+  if(!shopMode){
+    box.hidden=true;
+    if(stats)stats.style.display='';
+    if(btns)btns.style.display='';
+    updateAccTitle();
+    return;
+  }
   box.hidden=false;
+  if(stats)stats.style.display='none';
+  if(btns)btns.style.display='none';
   const isBacks=shopMode==='backs';
   $('accShopTitle').hidden=true;   /* заголовок магазину тепер у шапці */
   updateAccTitle();
@@ -1428,7 +1589,7 @@ function renderShop(){
     const isSel=sel===it.id;
     const row=document.createElement('div');row.className='accShopItem';
     row.innerHTML=
-      '<img class="thumb" src="'+it.img+'" alt="">'+
+      '<span class="thumb"></span>'+
       '<span class="nm">'+it.name+'</span>'+
       (isOwned?'':'<span class="pr">'+it.price+'</span><img class="pric" src="images/chip_mini.png" alt="">')+
       '<img class="st" src="'+(isSel?icons.on:icons.off)+'" alt="">';
@@ -1449,6 +1610,7 @@ function renderShop(){
       renderShop();
     };
     list.appendChild(row);
+    initThumb(row.querySelector('.thumb'),it,isBacks);
   });
 }
 $('backsBtn').onclick=e=>{e.stopPropagation();openShop('backs');};
@@ -1504,6 +1666,11 @@ $('bankPaper').onclick=()=>{
   renderAccount();
   $('bankrupt').hidden=true;
   $('lobby').hidden=false;
+};
+$('acceptStakeBtn').onclick=()=>{
+  $('acceptStakeBtn').hidden=true;
+  conn.send({t:'stakeConfirmed'});
+  $('joinStatus').textContent='Підключено! Очікуйте початку гри…';
 };
 $('botBtn').onclick=()=>{
   startBotGame();
