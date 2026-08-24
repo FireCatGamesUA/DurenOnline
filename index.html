@@ -931,7 +931,6 @@ $('createBtn').onclick=()=>{
   if(typeof Peer==='undefined'){toast('Немає зʼєднання з сервером PeerJS');return;}
   let v=parseInt($('stakeInput').value,10);
   pvpStake=isNaN(v)?10:Math.max(0,v);
-  if(pvpStake>0 && chips<pvpStake){toast('Недостатньо фішок для ставки');return;}
   $('stakeInput').value=pvpStake;
   roomCode=genCode();peer=new Peer(peerId(roomCode));
 peer.on('open',()=>{
@@ -945,16 +944,13 @@ peer.on('open',()=>{
     conn=c;setupConn();
     const v2=parseInt($('stakeInput').value,10);
     pvpStake=isNaN(v2)?pvpStake:Math.max(0,v2);
-    if(pvpStake>0 && chips<pvpStake){
-      $('hostStatus').textContent='У вас недостатньо фішок для цієї ставки';
-      c.close();conn=null;peer.destroy();peer=null;
-      $('createBtn').hidden=false;$('joinBtn').disabled=false;
-      $('hostBox').hidden=true;
-      return;
-    }
     $('stakeInput').disabled=true;
     $('botBtn').hidden=true;
-    joined=true;$('hostStatus').textContent='Суперник у кімнаті!';$('startBtn').hidden=false;
+    joined=true;
+    $('startBtn').hidden=false;                       /* меню з кодом завжди видиме */
+    const afford=(pvpStake<=0||chips>=pvpStake);
+    $('startBtn').disabled=!afford;                 /* кнопка активна лише якщо вистачає фішок */
+    $('hostStatus').textContent=afford?'Суперник у кімнаті!':'Недостатньо фішок для ставки!';
   });
   peer.on('error',e=>{if(e.type==='unavailable-id'){$('hostStatus').textContent='Код зайнятий — створіть ще раз';$('createBtn').hidden=false;}});
 };
@@ -980,7 +976,12 @@ function setupConn(){
 function onData(d){
   if(!d||typeof d!=='object')return;
   if(d.t==='hello'&&isHost){conn.send({t:'mode',mode});conn.send({t:'stake',stake:pvpStake});return;}
-  if(d.t==='stakeConfirmed'&&isHost){$('startBtn').disabled=false;$('hostStatus').textContent='Суперник підтвердив ставку!';return;}
+    if(d.t==='stakeConfirmed'&&isHost){
+    const afford=(pvpStake<=0||chips>=pvpStake);
+    $('startBtn').disabled=!afford;
+    $('hostStatus').textContent=afford?'Суперник підтвердив ставку!':'Недостатньо фішок для ставки!';
+    return;
+  }
 if(d.t==='stake'&&!isHost){
   pvpStake=d.stake;
   if(pvpStake>0 && chips<pvpStake){
