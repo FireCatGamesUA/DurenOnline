@@ -930,23 +930,30 @@ const genCode=()=>{const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='';for(let i=
 $('createBtn').onclick=()=>{
   if(typeof Peer==='undefined'){toast('Немає зʼєднання з сервером PeerJS');return;}
   let v=parseInt($('stakeInput').value,10);
-  pvpStake=isNaN(v)?10:Math.max(0,v);   /* isNaN, щоб ставка 0 не перетворювалась на 10 */
+  pvpStake=isNaN(v)?10:Math.max(0,v);
+  if(pvpStake>0 && chips<pvpStake){toast('Недостатньо фішок для ставки');return;}
   $('stakeInput').value=pvpStake;
   roomCode=genCode();peer=new Peer(peerId(roomCode));
 peer.on('open',()=>{
-  isHost=true;                          /* хост одразу стає хостом */
-  $('createBtn').hidden=true;          /* кнопка зникає після створення */
+  isHost=true;
+  $('createBtn').hidden=true;
   $('joinBtn').disabled=true;
   $('hostBox').hidden=false;$('myCode').textContent=roomCode;
 });
   peer.on('connection',c=>{
     if(conn){c.close();return;}
     conn=c;setupConn();
-    /* фіксуємо ставку лише в момент підключення суперника */
     const v2=parseInt($('stakeInput').value,10);
     pvpStake=isNaN(v2)?pvpStake:Math.max(0,v2);
+    if(pvpStake>0 && chips<pvpStake){
+      $('hostStatus').textContent='У вас недостатньо фішок для цієї ставки';
+      c.close();conn=null;peer.destroy();peer=null;
+      $('createBtn').hidden=false;$('joinBtn').disabled=false;
+      $('hostBox').hidden=true;
+      return;
+    }
     $('stakeInput').disabled=true;
-    $('botBtn').hidden=true;          /* кнопка "Грати з ботом" зникає */
+    $('botBtn').hidden=true;
     joined=true;$('hostStatus').textContent='Суперник у кімнаті!';$('startBtn').hidden=false;
   });
   peer.on('error',e=>{if(e.type==='unavailable-id'){$('hostStatus').textContent='Код зайнятий — створіть ще раз';$('createBtn').hidden=false;}});
@@ -976,8 +983,13 @@ function onData(d){
   if(d.t==='stakeConfirmed'&&isHost){$('startBtn').disabled=false;$('hostStatus').textContent='Суперник підтвердив ставку!';return;}
 if(d.t==='stake'&&!isHost){
   pvpStake=d.stake;
-  $('joinStatus').textContent='Ставка: '+pvpStake+' фішок';
-  $('acceptStakeBtn').hidden=false;
+  if(pvpStake>0 && chips<pvpStake){
+    $('joinStatus').textContent='Ставка: '+pvpStake+' — недостатньо фішок!';
+    $('acceptStakeBtn').hidden=true;
+  }else{
+    $('joinStatus').textContent='Ставка: '+pvpStake+' фішок';
+    $('acceptStakeBtn').hidden=false;
+  }
   return;
 }
   if(d.t==='mode'&&!isHost){
@@ -1506,7 +1518,7 @@ async function saveAccount(){
 function applyReward(){
   if(rewardGiven||!V||V.phase!=='over'||V.result==='draw')return;
   rewardGiven=true;
-  const reward=isBotGame?10:pvpStake;
+  const reward=isBotGame?(pvpStake>0?10:0):pvpStake;
   if(V.result==='win'){chips+=reward;if(isBotGame)winsBot++;else winsPvp++;}
   else{chips=Math.max(0,chips-reward);if(isBotGame)losesBot++;else losesPvp++;}
   saveAccount();
@@ -1668,11 +1680,15 @@ $('bankPaper').onclick=()=>{
   $('lobby').hidden=false;
 };
 $('acceptStakeBtn').onclick=()=>{
+  if(pvpStake>0 && chips<pvpStake){toast('Недостатньо фішок для ставки');return;}
   $('acceptStakeBtn').hidden=true;
   conn.send({t:'stakeConfirmed'});
   $('joinStatus').textContent='Підключено! Очікуйте початку гри…';
 };
 $('botBtn').onclick=()=>{
+  let v=parseInt($('stakeInput').value,10);
+  pvpStake=isNaN(v)?0:Math.max(0,v);
+  if(pvpStake>0 && chips<pvpStake){toast('Недостатньо фішок для ставки');return;}
   startBotGame();
 };
 </script>
